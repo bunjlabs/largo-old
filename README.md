@@ -23,8 +23,30 @@ Largo is a tiny compiled scripting language that aims to run untrusted scripts i
 * Limited in capabilities. No complex programs or it can be harmful
 * Buggy and no docs currently (TODO)
 
-## Examples
+## Running scripts
+```java
+Parser parser = new Parser(new FileReader("test.lgo"));
+RootNode root = parser.parse();
 
+SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
+SemanticInfo semanticInfo = semanticAnalyzer.analyze(root);
+
+CodeGenerator codeGenerator = new CodeGenerator();
+Program program = codeGenerator.generate(root, semanticInfo);
+
+DefaultLargoRuntimeConstraints constraints = new DefaultLargoRuntimeConstraints();
+constraints.setMaxExecutionTime(1000);
+
+LargoEnvironment environment = new DefaultLargoEnvironment(constraints);
+environment.export("math", MathLib.MATH);
+environment.export("print", LibFunctions.biConsumer((ctx, value) -> System.out.println(value.asJString())));
+
+LargoRuntime runtime = new DefaultLargoRuntime();
+runtime.execute(environment, program);
+```
+Phew!
+
+## Examples
 #### Hello world
 ```
 import print;
