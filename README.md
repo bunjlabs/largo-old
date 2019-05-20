@@ -47,3 +47,15 @@ for (let i = 2; i <= n; i++) {
 
 print(b);
 ```
+
+#### Math
+```
+import math as m;
+import print;
+
+let age = 38.56;
+print(m.floor(age) + " " + m.ceil(age));
+
+let angle = m.toRadians(60);
+print(m.sin(angle) + " " + m.cos(angle));
+```
