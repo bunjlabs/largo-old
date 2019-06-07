@@ -11,4 +11,8 @@ public class BaseNode {
     public NodeType getType() {
         return type;
     }
+
+    public void setType(NodeType type) {
+        this.type = type;
+    }
 }

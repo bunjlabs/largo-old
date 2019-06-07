@@ -1,8 +1,9 @@
 package com.com.bunjlabs.largo.compiler;
 
+import com.bunjlabs.largo.Blueprint;
 import com.bunjlabs.largo.compiler.codegen.CodeGenerator;
 import com.bunjlabs.largo.compiler.parser.Parser;
-import com.bunjlabs.largo.compiler.parser.nodes.RootNode;
+import com.bunjlabs.largo.compiler.parser.nodes.Node;
 import com.bunjlabs.largo.compiler.semantic.SemanticAnalyzer;
 import com.bunjlabs.largo.compiler.semantic.SemanticInfo;
 import com.bunjlabs.largo.lib.MathLib;
@@ -15,16 +16,16 @@ import java.io.StringReader;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class RuntimeTest {
-    private static SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
-    private static CodeGenerator codeGenerator = new CodeGenerator();
     private static DefaultLargoRuntimeConstraints constraints = new DefaultLargoRuntimeConstraints();
     private static LargoRuntime runtime = new DefaultLargoRuntime();
 
     String run(String source) throws Exception {
         Parser parser = new Parser(new StringReader("import r;import m;" + source));
-        RootNode root = parser.parse();
-        SemanticInfo semanticInfo = semanticAnalyzer.analyze(root);
-        Program program = codeGenerator.generate(root, semanticInfo);
+        Node root = parser.parse();
+        SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer(root);
+        SemanticInfo semanticInfo = semanticAnalyzer.analyze();
+        CodeGenerator codeGenerator = new CodeGenerator(semanticInfo);
+        Blueprint blueprint = codeGenerator.generate();
 
         LargoEnvironment environment = new DefaultLargoEnvironment(constraints);
 
@@ -32,7 +33,7 @@ class RuntimeTest {
         environment.export("r", LibFunctions.biConsumer((ctx, value) -> result[0] = value.asJString()));
         environment.export("m", MathLib.MATH);
 
-        runtime.execute(environment, program);
+        runtime.execute(environment, blueprint);
 
         return result[0];
     }

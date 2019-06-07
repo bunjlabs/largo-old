@@ -210,6 +210,8 @@ public class Lexer {
                                     return TK_BREAK;
                                 case "continue":
                                     return TK_CONTINUE;
+                                case "return":
+                                    return TK_RETURN;
                                 case "true":
                                     return TK_TRUE;
                                 case "false":

@@ -64,6 +64,7 @@ public enum Token {
     TK_DO,
     TK_BREAK,
     TK_CONTINUE,
+    TK_RETURN,
 
     //Misc
     TK_EOS,

@@ -42,7 +42,7 @@ public abstract class LargoValue {
         return LargoBoolean.FALSE;
     }
 
-    public LargoValue call(LargoValue... key) {
+    public LargoValue call(LargoValue... args) {
         return LargoUndefined.UNDEFINED;
     }
 

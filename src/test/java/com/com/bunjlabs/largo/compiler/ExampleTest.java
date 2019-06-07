@@ -5,18 +5,17 @@ import com.bunjlabs.largo.compiler.codegen.CodeGenerator;
 import com.bunjlabs.largo.compiler.lexer.LexerException;
 import com.bunjlabs.largo.compiler.parser.Parser;
 import com.bunjlabs.largo.compiler.parser.ParserException;
-import com.bunjlabs.largo.compiler.parser.nodes.RootNode;
+import com.bunjlabs.largo.compiler.parser.nodes.Node;
 import com.bunjlabs.largo.compiler.semantic.SemanticAnalyzer;
-import com.bunjlabs.largo.compiler.semantic.SemanticInfo;
-import com.bunjlabs.largo.lib.MathLib;
 import com.bunjlabs.largo.lib.functions.LibFunctions;
-import com.bunjlabs.largo.runtime.*;
+import com.bunjlabs.largo.runtime.LargoRuntimeException;
+import com.bunjlabs.largo.types.LargoClosure;
+import com.bunjlabs.largo.types.LargoObject;
+import com.bunjlabs.largo.types.LargoString;
 import org.junit.jupiter.api.Test;
 
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
 public class ExampleTest {
 
@@ -24,22 +23,15 @@ public class ExampleTest {
     void start() throws IOException, LexerException, ParserException, SemanticException, LargoRuntimeException {
         Parser parser = new Parser(new FileReader("test.lgo"));
 
-        RootNode root = parser.parse();
-        CodeGenerator codeGenerator = new CodeGenerator();
-        SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
-        SemanticInfo semanticInfo = semanticAnalyzer.analyze(root);
-        Program program = codeGenerator.generate(root, semanticInfo);
+        Node root = parser.parse();
+        SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer(root);
+        CodeGenerator codeGenerator = new CodeGenerator(semanticAnalyzer.analyze());
 
-        Map<Object, Object> userData = new HashMap<>();
+        LargoObject api = new LargoObject();
+        api.set(LargoString.from("print"), LibFunctions.biConsumer((ctx, value) -> System.out.println(value.asJString())));
 
-        DefaultLargoRuntimeConstraints constraints = new DefaultLargoRuntimeConstraints();
-        constraints.setMaxExecutionTime(1000);
-        LargoEnvironment environment = new DefaultLargoEnvironment(constraints);
-        environment.export("math", MathLib.MATH);
-        environment.export("print", LibFunctions.biConsumer((ctx, value) -> System.out.println(value.asJString())));
+        LargoClosure largoClosure = new LargoClosure(api, codeGenerator.generate());
 
-        LargoRuntime runtime = new DefaultLargoRuntime();
-
-        runtime.execute(environment, program);
+        largoClosure.call();
     }
 }

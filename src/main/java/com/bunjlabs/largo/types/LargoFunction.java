@@ -8,7 +8,7 @@ public abstract class LargoFunction extends LargoValue {
         this.context = this;
     }
 
-    private LargoFunction(LargoValue context) {
+    protected LargoFunction(LargoValue context) {
         this.context = context;
     }
 
@@ -30,5 +30,5 @@ public abstract class LargoFunction extends LargoValue {
         return call(context, args);
     }
 
-    public abstract LargoValue call(LargoValue context, LargoValue... args);
+    protected abstract LargoValue call(LargoValue context, LargoValue... args);
 }

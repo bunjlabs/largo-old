@@ -1,15 +1,21 @@
 package com.bunjlabs.largo.compiler.semantic.tables;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class IdTable {
 
     private final Deque<VariableScope> scopeStack = new ArrayDeque<>();
 
     private int autoIncrementId = 0;
+
+    public IdTable() {
+        push();
+    }
+
+    public IdTable(List<String> funcArguments) {
+        push();
+        for (String arg : funcArguments) createId(arg);
+    }
 
     public int getId(String name) {
         for (VariableScope scope : scopeStack) {

@@ -5,7 +5,6 @@ import com.bunjlabs.largo.compiler.lexer.LexerException;
 import com.bunjlabs.largo.compiler.lexer.Token;
 import com.bunjlabs.largo.compiler.parser.nodes.Node;
 import com.bunjlabs.largo.compiler.parser.nodes.OperatorType;
-import com.bunjlabs.largo.compiler.parser.nodes.RootNode;
 
 import java.io.IOException;
 import java.io.Reader;
@@ -26,10 +25,10 @@ public class Parser {
         this.l = new Lexer(r);
     }
 
-    public RootNode parse() throws LexerException, ParserException {
+    public Node parse() throws LexerException, ParserException {
         lexerNext();
 
-        return new RootNode(statementList());
+        return statementList();
     }
 
     private Node expressionList() throws LexerException, ParserException {
@@ -83,7 +82,7 @@ public class Parser {
                 break;
             case TK_TRUE:
             case TK_FALSE:
-                node = new Node(ND_BOOL);
+                node = new Node(ND_BOOLEAN);
                 node.setString(token == TK_TRUE ? "true" : "false");
                 setNodeLine(node, ln, cn);
                 break;
@@ -101,7 +100,7 @@ public class Parser {
                 setNodeLine(node, ln, cn);
                 break;
             case TK_ID:
-                node = new Node(ND_ID);
+                node = new Node(ND_ID_LOCAL);
                 node.setString(l.sval);
 
 
@@ -162,7 +161,7 @@ public class Parser {
 
                 if (token != TK_ID) throw expectedTokenException(l, token, TK_ID);
 
-                Node rightExpr = new Node(ND_ID);
+                Node rightExpr = new Node(ND_ID_LOCAL);
                 rightExpr.setString(l.sval);
                 setNodeLine(rightExpr, l);
 
@@ -205,8 +204,6 @@ public class Parser {
                 Node nextExprStmt = new Node(ND_EXPR_STMT);
                 curr.setChild(1, nextExprStmt);
                 curr = nextExprStmt;
-
-                continue;
             } else {
                 curr.setChild(1, new Node(ND_EMPTY));
 
@@ -373,6 +370,21 @@ public class Parser {
         return node;
     }
 
+    private Node returnStatement() throws LexerException, ParserException {
+        lexerNext();
+
+        Node node = new Node(ND_RETURN);
+        setNodeLine(node, l);
+
+        if (token != TK_END_STMT) {
+            node.setChild(0, expression());
+        } else {
+            node.setChild(0, new Node(ND_EMPTY));
+        }
+
+        return node;
+    }
+
     private Node importStatement() throws LexerException, ParserException {
         lexerNext();
 
@@ -383,7 +395,7 @@ public class Parser {
         Node node = new Node(ND_IMPORT);
         node.setString(l.sval);
 
-        Node id = new Node(ND_ID);
+        Node id = new Node(ND_ID_LOCAL);
         id.setString(l.sval);
         node.setChild(0, id);
 
@@ -475,6 +487,13 @@ public class Parser {
                 node = new Node(ND_CONTINUE);
                 setNodeLine(node, l);
                 lexerNext();
+                if (token != TK_END_STMT) {
+                    throw expectedTokenException(l, token, TK_END_STMT);
+                }
+                lexerNext();
+                break;
+            case TK_RETURN:
+                node = returnStatement();
                 if (token != TK_END_STMT) {
                     throw expectedTokenException(l, token, TK_END_STMT);
                 }

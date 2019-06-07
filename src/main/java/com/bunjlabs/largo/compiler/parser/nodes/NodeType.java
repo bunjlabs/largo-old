@@ -1,7 +1,6 @@
 package com.bunjlabs.largo.compiler.parser.nodes;
 
 public enum NodeType {
-    ND_ROOT,
     ND_EMPTY,             // empty statement []
 
     ND_IMPORT,            // import statement [id]
@@ -14,9 +13,10 @@ public enum NodeType {
     ND_IFELSE_STMT,       // if statement with else [cond, if-part, else-part]
     ND_WHILE_STMT,        // while statement [cond, while-part]
     ND_FOR_STMT,          // for statement [init, cond, post, for-part]
-    ND_CALL,         // function call [id, args]
+    ND_CALL,              // function call [id, args]
     ND_BREAK,             // loop break
     ND_CONTINUE,          // loop continue
+    ND_RETURN,            // function return statement [expression]
 
     // Expressions
     ND_BINOP_EXPR,        // Binary operator (+, -, *, +=, -=, ...)
@@ -26,9 +26,10 @@ public enum NodeType {
     // Expressions with data
     ND_NULL,
     ND_UNDEFINED,
-    ND_ID,
+    ND_ID_LOCAL,
+    ND_ID_OUTER,
     ND_NUMBER,
-    ND_BOOL,
+    ND_BOOLEAN,
     ND_STRING,
     ND_FUNC_DEF,
 

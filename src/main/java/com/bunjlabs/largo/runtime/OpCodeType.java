@@ -1,22 +1,29 @@
 package com.bunjlabs.largo.runtime;
 
 public enum OpCodeType {
-    // Stack operators
+    // Variable
     L_GETLOCAL,
     L_SETLOCAL,
-    L_SETLOCAL_S,
+    L_GETOUTER,
+    L_CLOSURE,
+
+    // Object
     L_GETNAME,
+
+    // Export and constants
     L_IMPORT,
     L_CONST,
+
+    // Stack operators
+    L_PUSH,
     L_POP,
 
     // Jumpers
-    L_JUMP,
-    L_JUMP_F,
+    L_JMP,
+    L_JMPF,
 
     // Constants
-    L_TRUE,
-    L_FALSE,
+    L_BOOLEAN,
     L_UNDEFINED,
     L_NULL,
 
@@ -38,10 +45,10 @@ public enum OpCodeType {
     // Boolean
     L_EQ,
     L_NOTEQ,
-    L_GREAT,
-    L_GREATEQ,
-    L_LESS,
-    L_LESSEQ,
+    L_GT,
+    L_GTEQ,
+    L_LT,
+    L_LTEQ,
 
     // Logic
     L_AND,
@@ -53,5 +60,6 @@ public enum OpCodeType {
     L_ERR,
 
     // Call
-    L_CALL
+    L_CALL,
+    L_RET
 }
