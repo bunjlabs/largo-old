@@ -7,16 +7,15 @@ Largo is a tiny compiled scripting language that aims to run untrusted scripts i
 
 ### Features
 * C/JS-style simplified code
-* Dynamically typed
-* Basic types: null, undefined, boolean, number, string, object, function
+* Dynamically typed without any cast exceptions
+* Basic types: null, undefined, boolean, number, string, object, array, function (i.e. closures)
 * Compiler / VM architecture
-* Linear bytecode
-* Suppport Imports/exports
+* Linear bytecode including nested functions
+* Modules with import/export syntax
 * Fully sandboxed and secure
-* Configurable constraints for code size, memory, stack, execution time, etc.
+* Configurable constraints for code size, memory, stack, etc.
 * Does not have access to external world by default
-* Easy embeddable to Java
-* Not strict
+* Easy embeddable and extensible to Java
 
 ### Disadvantages
 * Slow due to basic interpreter and security
@@ -25,26 +24,15 @@ Largo is a tiny compiled scripting language that aims to run untrusted scripts i
 
 ## Running scripts
 ```java
-Parser parser = new Parser(new FileReader("test.lgo"));
-RootNode root = parser.parse();
+var environment = new DefaultLargoEnvironment();
+environment.export("print", LargoFunction.fromBiConsumer((ctx, str) -> System.out.println(str.asJString())));
+environment.export("math", MathLib.LIB);
 
-SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer();
-SemanticInfo semanticInfo = semanticAnalyzer.analyze(root);
+var runtime = new DefaultLargoRuntime(environment);
+var function = runtime.load(new FileReader("test.lgo"));
 
-CodeGenerator codeGenerator = new CodeGenerator();
-Program program = codeGenerator.generate(root, semanticInfo);
-
-DefaultLargoRuntimeConstraints constraints = new DefaultLargoRuntimeConstraints();
-constraints.setMaxExecutionTime(1000);
-
-LargoEnvironment environment = new DefaultLargoEnvironment(constraints);
-environment.export("math", MathLib.MATH);
-environment.export("print", LibFunctions.biConsumer((ctx, value) -> System.out.println(value.asJString())));
-
-LargoRuntime runtime = new DefaultLargoRuntime();
-runtime.execute(environment, program);
+function.call(environment.getContext());
 ```
-Phew!
 
 ## Examples
 #### Hello world
