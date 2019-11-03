@@ -1,4 +1,4 @@
-package com.bunjlabs.largo.runtime;
+package com.bunjlabs.largo;
 
 public class LargoRuntimeException extends Exception {
     public LargoRuntimeException() {

@@ -6,6 +6,7 @@ public enum LargoType {
     BOOLEAN("boolean"),
     NUMBER("number"),
     STRING("string"),
+    ARRAY("array"),
     OBJECT("object"),
     FUNCTION("function");
 

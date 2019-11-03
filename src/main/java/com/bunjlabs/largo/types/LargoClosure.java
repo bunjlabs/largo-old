@@ -1,7 +1,7 @@
 package com.bunjlabs.largo.types;
 
 import com.bunjlabs.largo.Blueprint;
-import com.bunjlabs.largo.runtime.OpCode;
+import com.bunjlabs.largo.Instruction;
 
 public class LargoClosure extends LargoFunction {
 
@@ -9,38 +9,35 @@ public class LargoClosure extends LargoFunction {
     private final LargoValue[] stack;
     private final int stackIndex;
 
-    public LargoClosure(Blueprint blueprint) {
+    private LargoClosure(Blueprint blueprint) {
         this.blueprint = blueprint;
         this.stack = createStack();
         this.stackIndex = 0;
     }
 
-    public LargoClosure(LargoValue context, Blueprint blueprint) {
-        super(context);
-        this.blueprint = blueprint;
-        this.stack = createStack();
-        this.stackIndex = 0;
-    }
-
-    public LargoClosure(Blueprint blueprint, LargoValue[] stack, int stackIndex) {
+    private LargoClosure(Blueprint blueprint, LargoValue[] stack, int stackIndex) {
         this.blueprint = blueprint;
         this.stack = stack;
         this.stackIndex = stackIndex;
     }
 
+    public static LargoClosure from(Blueprint blueprint) {
+        return new LargoClosure(blueprint);
+    }
+
     @Override
-    protected LargoValue call(LargoValue context, LargoValue... args) {
-        OpCode[] code = blueprint.getCode();
+    public LargoValue call(LargoValue context, LargoValue... args) {
+        Instruction[] code = blueprint.getCode();
         LargoValue[] constants = blueprint.getConstantPool();
+        Blueprint[] blueprints = blueprint.getBlueprints();
 
-        // Closure call stack scheme example
-        // [registers: a b c] [local variables] [tail stack]
-        // [registers: a b c] [outer variables #1] [local variables] [tail stack]
-        // [registers: a b c] [outer variables #1] [outer variables #2] [local variables] [tail stack]
+        // Closure call stack scheme
+        // [registers] [outer variables]... [local variables] [tail stack]
 
-        int o = 3;
-        int v = 3 + stackIndex;
-        int s = 3 + stackIndex + blueprint.getLocalVariablesCount();
+        LargoValue currentContext = context;
+        final int o = blueprint.getRegistersCount();
+        final int v = blueprint.getRegistersCount() + stackIndex;
+        int s = blueprint.getRegistersCount() + stackIndex + blueprint.getLocalVariablesCount();
 
         for (int i = 0; i < blueprint.getArgumentsCount(); i++) {
             if (i >= args.length) {
@@ -50,34 +47,60 @@ public class LargoClosure extends LargoFunction {
             }
         }
 
-        for (int index = 0, count = 0; index < code.length; index++, count++) {
-            OpCode op = code[index];
+        for (int pc = 0, count = 0; pc < code.length; pc++, count++) {
+            Instruction op = code[pc];
 
-            switch (op.type) {
+            switch (op.name) {
                 case L_IMPORT:
                     stack[op.a] = context.get(constants[op.b]);
                     break;
-                case L_GETLOCAL:
+                case L_LOAD:
                     stack[op.a] = stack[v + op.b];
                     break;
-                case L_GETOUTER:
+                case L_LOADO:
                     stack[op.a] = stack[o + op.b];
                     break;
-                case L_SETLOCAL:
+                case L_LOADA:
+                    stack[op.a] = new LargoArray();
+                    break;
+                case L_LOADM:
+                    stack[op.a] = new LargoObject();
+                    break;
+                case L_LOADC:
+                    stack[op.a] = constants[op.b];
+                    break;
+                case L_LOADB:
+                    stack[op.a] = op.b != 0 ? LargoBoolean.TRUE : LargoBoolean.FALSE;
+                    break;
+                case L_LOADN:
+                    stack[op.a] = LargoNull.NULL;
+                    break;
+                case L_LOADU:
+                    stack[op.a] = LargoUndefined.UNDEFINED;
+                    break;
+                case L_LOADF:
+                    stack[op.a] = new LargoClosure(blueprints[op.b], stack, stackIndex + blueprint.getLocalVariablesCount());
+                    break;
+                case L_STORE:
                     stack[v + op.a] = stack[op.b];
                     break;
-                case L_CLOSURE: {
-                    stack[op.a] = new LargoClosure(
-                            blueprint.getBlueprints()[op.b],
-                            stack,
-                            stackIndex + blueprint.getLocalVariablesCount());
+                case L_STOREO:
+                    stack[o + op.a] = stack[op.b];
                     break;
-                }
-                case L_GETNAME:
+                case L_GETINDEX:
+                    stack[op.a] = stack[op.b].get(stack[op.c]);
+                    break;
+                case L_PUTINDEX:
+                    stack[op.a].set(stack[op.b], stack[op.c]);
+                    break;
+                case L_PUSHA:
+                    stack[op.a].push(stack[op.b]);
+                    break;
+                case L_GETFIELD:
                     stack[op.a] = stack[op.b].get(constants[op.c]);
                     break;
-                case L_CONST:
-                    stack[op.a] = constants[op.b];
+                case L_SETFIELD:
+                    stack[op.a].set(constants[op.b], stack[op.c]);
                     break;
                 case L_PUSH:
                     stack[s++] = stack[op.a];
@@ -86,19 +109,10 @@ public class LargoClosure extends LargoFunction {
                     stack[op.a] = stack[s++];
                     break;
                 case L_JMP:
-                    index += op.a < 0 ? op.a - 2 : op.a;
+                    pc += op.a < 0 ? op.a - 2 : op.a;
                     break;
                 case L_JMPF:
-                    if (!stack[op.b].asJBoolean()) index += op.a < 0 ? op.a - 2 : op.a;
-                    break;
-                case L_BOOLEAN:
-                    stack[op.a] = op.b > 0 ? LargoBoolean.TRUE : LargoBoolean.FALSE;
-                    break;
-                case L_NULL:
-                    stack[op.a] = LargoNull.NULL;
-                    break;
-                case L_UNDEFINED:
-                    stack[op.a] = LargoUndefined.UNDEFINED;
+                    if (!stack[op.a].asJBoolean()) pc += op.b < 0 ? op.b - 2 : op.b;
                     break;
                 case L_ADD:
                     stack[op.a] = stack[op.b].add(stack[op.c]);
@@ -154,17 +168,16 @@ public class LargoClosure extends LargoFunction {
                 case L_NOT:
                     stack[op.a] = stack[op.b].not();
                     break;
-                case L_NOP:
-                case L_ERR:
-                    break;
                 case L_CALL:
                     LargoValue[] callValues = new LargoValue[op.c];
                     for (int j = callValues.length - 1; j >= 0; j--) callValues[j] = stack[--s];
-
-                    stack[op.b].call(callValues);
+                    stack[op.a] = stack[op.b].call(context, callValues);
                     break;
                 case L_RET:
                     return stack[op.a];
+                case L_NOP:
+                case L_ERR:
+                    break;
             }
         }
 
@@ -172,6 +185,7 @@ public class LargoClosure extends LargoFunction {
     }
 
     private LargoValue[] createStack() {
-        return new LargoValue[3 + blueprint.getMaxStackSize()];
+        int fullStackSize = blueprint.getRegistersCount() + blueprint.getVariablesCount() + blueprint.getCallStackSize();
+        return new LargoValue[fullStackSize];
     }
 }

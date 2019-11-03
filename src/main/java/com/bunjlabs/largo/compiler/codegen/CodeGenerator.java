@@ -1,122 +1,157 @@
 package com.bunjlabs.largo.compiler.codegen;
 
-import com.bunjlabs.largo.Blueprint;
+import com.bunjlabs.largo.*;
 import com.bunjlabs.largo.compiler.SemanticException;
 import com.bunjlabs.largo.compiler.parser.nodes.Node;
+import com.bunjlabs.largo.compiler.parser.nodes.NodeType;
 import com.bunjlabs.largo.compiler.parser.nodes.OperatorType;
 import com.bunjlabs.largo.compiler.semantic.SemanticInfo;
-import com.bunjlabs.largo.runtime.OpCode;
-import com.bunjlabs.largo.runtime.OpCodeType;
 import com.bunjlabs.largo.types.LargoValue;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Stack;
 
 import static com.bunjlabs.largo.compiler.Utils.*;
 import static com.bunjlabs.largo.compiler.parser.nodes.NodeType.*;
 import static com.bunjlabs.largo.compiler.parser.nodes.OperatorType.*;
-import static com.bunjlabs.largo.runtime.OpCodeType.*;
 
 public class CodeGenerator {
 
-    private final List<OpCode> opCodes = new LinkedList<>();
+    private final InstructionSequenceBuilder inst = new InstructionSequenceBuilder();
     private final Stack<FlowBreak> breaks = new Stack<>();
     private final Stack<FlowBreak> continues = new Stack<>();
 
     private final List<Blueprint> blueprints = new ArrayList<>();
     private final SemanticInfo semanticInfo;
     private int loopLevel = 0;
-    private int maxStackSize = 0;
+    private int maxRegistersCount = 0;
+    private int maxVariablesCount = 0;
+    private int maxCallStackSize = 0;
 
     public CodeGenerator(SemanticInfo semanticInfo) {
         this.semanticInfo = semanticInfo;
+        reserveVariables(semanticInfo.getLocalVariablesCount());
     }
 
-    private void reserveStack(int size) {
-        if (size > maxStackSize) {
-            maxStackSize = size;
+    private void reserveRegisters(int count) {
+        if (count > maxRegistersCount) {
+            maxRegistersCount = count;
         }
     }
 
-    private OpCode putOpCode(OpCodeType opCodeType) {
-        OpCode opCode = new OpCode(opCodeType);
-        opCodes.add(opCode);
-
-        return opCode;
+    private void reserveVariables(int count) {
+        maxVariablesCount += count;
     }
 
-    private OpCode putOpCode(OpCodeType opCodeType, int a) {
-        OpCode opCode = new OpCode(opCodeType, a);
-        opCodes.add(opCode);
-
-        return opCode;
-    }
-
-    private OpCode putOpCode(OpCodeType opCodeType, int a, int b) {
-        OpCode opCode = new OpCode(opCodeType, a, b);
-        opCodes.add(opCode);
-
-        return opCode;
-    }
-
-    private OpCode putOpCode(OpCodeType opCodeType, int a, int b, int c) {
-        OpCode opCode = new OpCode(opCodeType, a, b, c);
-        opCodes.add(opCode);
-
-        return opCode;
+    private void reserveCallStack(int size) {
+        if (size > maxCallStackSize) {
+            maxCallStackSize = size;
+        }
     }
 
     private void putBreak() {
-        breaks.push(new FlowBreak(opCodes.get(opCodes.size() - 1), opCodes.size() - 1, loopLevel));
+        List<Instruction> instructions = inst.getInstructions();
+        breaks.push(new FlowBreak(instructions.get(instructions.size() - 1), instructions.size() - 1, loopLevel));
     }
 
     private void putContinue() {
-        continues.push(new FlowBreak(opCodes.get(opCodes.size() - 1), opCodes.size() - 1, loopLevel));
+        List<Instruction> instructions = inst.getInstructions();
+        continues.push(new FlowBreak(instructions.get(instructions.size() - 1), instructions.size() - 1, loopLevel));
     }
 
     private void processBrCont(int back) {
+        List<Instruction> instructions = inst.getInstructions();
         while (!breaks.isEmpty() && breaks.peek().getLoopLevel() == loopLevel) {
             FlowBreak br = breaks.pop();
-            br.getOpcode().a = opCodes.size() - br.getPos();
+            br.getInstruction().a = instructions.size() - br.getPos();
         }
         while (!continues.isEmpty() && continues.peek().getLoopLevel() == loopLevel) {
             FlowBreak br = continues.pop();
-            br.getOpcode().a = back - br.getPos() + 2; // 2 because cur op is JMP
+            br.getInstruction().a = back - br.getPos() + 2; // 2 because cur op is JMP
         }
     }
 
+    private void generateVarLoad(int reg, int variable, boolean outer) {
+        if (outer) {
+            inst.loado(reg, variable);
+        } else {
+            inst.load(reg, variable);
+        }
+    }
+
+    private void generateVarStore(int variable, int reg, boolean outer) {
+        if (outer) {
+            inst.storeo(variable, reg);
+        } else {
+            inst.store(variable, reg);
+        }
+    }
+
+    private void generateArray(Node node, int reg) throws SemanticException {
+        reserveRegisters(reg + 1);
+
+        inst.loada(reg);
+
+        Node body = node.getChild(0);
+        if (checkNodeType(body, ND_EXPR_LIST)) {
+            Node curr = body;
+            while (!checkNodeType(curr, ND_EMPTY)) {
+                generateExpression(curr.getChild(0), reg + 1);
+                inst.pusha(reg, reg + 1);
+                curr = curr.getChild(1);
+            }
+        } else if (!checkNodeType(body, ND_EMPTY)) {
+            generateExpression(body, reg + 1);
+            inst.pusha(reg, reg + 1);
+        }
+    }
+
+    private void generateObject(Node node, int reg) throws SemanticException {
+        reserveRegisters(reg + 1);
+        inst.loadm(reg);
+    }
+
     private void generateFunctionDefinition(Node node, int reg) throws SemanticException {
+        reserveRegisters(reg + 1);
+
         Node body = node.getChild(1);
 
         SemanticInfo[] functions = semanticInfo.getFunctions();
-
         SemanticInfo closureSemanticInfo = functions[node.getArgument()];
         CodeGenerator generator = new CodeGenerator(closureSemanticInfo);
 
         if (checkNodeType(body, ND_STMT_LIST)) {
             generator.generateStatement(body);
         } else {
-            generator.generateExpressionStatement(body, 0);
-            generator.putOpCode(L_RET, 0);
+            generator.generateExpressionStatement(body, reg);
+            generator.inst.ret(reg);
         }
 
-        OpCode[] code = generator.opCodes.toArray(new OpCode[0]);
+        Instruction[] code = generator.inst.getInstructions().toArray(new Instruction[0]);
         LargoValue[] constantPool = closureSemanticInfo.getConstPool();
+
+        int registersCount = generator.maxRegistersCount;
         int argumentsCount = closureSemanticInfo.getArgumentsCount();
+        int variablesCount = generator.maxVariablesCount;
         int localVariablesCount = closureSemanticInfo.getLocalVariablesCount();
+        int callStackSize = generator.maxCallStackSize;
+
         Blueprint[] blueprintsArray = generator.blueprints.toArray(new Blueprint[0]);
 
-        Blueprint blueprint = new Blueprint(code, constantPool, argumentsCount, localVariablesCount, localVariablesCount + generator.maxStackSize, blueprintsArray);
+        Blueprint blueprint = new Blueprint(code, constantPool, registersCount, argumentsCount, variablesCount, localVariablesCount, callStackSize, blueprintsArray);
 
-        reserveStack(localVariablesCount + generator.maxStackSize);
+        reserveRegisters(generator.maxRegistersCount);
+        reserveVariables(variablesCount);
+        reserveCallStack(callStackSize);
 
         blueprints.add(blueprint);
-        putOpCode(L_CLOSURE, reg, node.getArgument());
+        inst.loadf(reg, node.getArgument());
     }
 
     private void generateFunctionCall(Node node, int reg) throws SemanticException {
+        reserveRegisters(reg + 1);
+
         Node expr = node.getChild(0);
         Node args = node.getChild(1);
 
@@ -124,41 +159,86 @@ public class CodeGenerator {
         if (checkNodeType(args, ND_EMPTY)) {
             argCount = 0;
         } else if (checkNodeType(args, ND_EXPR_LIST)) {
-            argCount = generateExpressionListStack(args);
+            argCount = generateExpressionListStack(args, reg);
         } else {
-            generateExpression(args, 0);
-            putOpCode(L_PUSH, 0);
+            generateExpression(args, reg);
+            inst.push(reg);
             argCount = 1;
         }
 
-        reserveStack(argCount);
+        reserveCallStack(argCount);
+        generateExpression(expr, reg);
+        inst.call(reg, reg, argCount);
+    }
 
-        generateExpression(expr, 0);
+    private void generateIndexSelect(Node node, int reg) throws SemanticException {
+        reserveRegisters(reg + 1);
 
-        putOpCode(L_CALL, reg, 0, argCount);
+        Node expr = node.getChild(0);
+        Node index = node.getChild(1);
+
+        generateExpression(index, reg + 1);
+        generateExpression(expr, reg);
+
+        inst.getindex(reg, reg, reg + 1);
+    }
+
+    private void generateIndexSet(Node node, int reg) throws SemanticException {
+        reserveRegisters(reg + 1);
+
+        Node leftExpr = node.getChild(0);
+        Node index = node.getChild(1);
+        Node rightExpr = node.getChild(2);
+
+        generateExpression(rightExpr, reg + 2);
+        generateExpression(index, reg + 1);
+        generateExpression(leftExpr, reg);
+
+        inst.putindex(reg, reg + 1, reg + 2);
     }
 
     private void generateFieldSelect(Node node, int reg) throws SemanticException {
-        Node expr = node.getChild(0);
-        generateExpression(expr, 0);
+        reserveRegisters(reg + 1);
 
+        Node expr = node.getChild(0);
         Node id = node.getChild(1);
 
-        putOpCode(L_GETNAME, reg, 0, id.getArgument());
+        generateExpression(expr, reg);
+
+        inst.getfield(reg, reg, id.getArgument());
+    }
+
+    private void generateFieldSet(Node node, int reg) throws SemanticException {
+        reserveRegisters(reg + 1);
+
+        Node leftExpr = node.getChild(0);
+        Node id = node.getChild(1);
+        Node rightExpr = node.getChild(2);
+
+        generateExpression(rightExpr, reg + 1);
+        generateExpression(leftExpr, reg);
+
+        inst.putfield(reg, id.getArgument(), reg + 1);
     }
 
     private void generateBinaryOperator(Node node, int reg) throws SemanticException {
+        reserveRegisters(reg + 1);
+
         Node leftNode = node.getChild(0);
         Node rightNode = node.getChild(1);
 
         if (node.getOperator() == OP_ASSIGN) {
             generateExpression(rightNode, reg);
-            putOpCode(L_SETLOCAL, leftNode.getArgument(), reg);
+            if (leftNode.getType() == ND_ID_LOCAL) {
+                inst.store(leftNode.getArgument(), reg);
+            } else {
+                inst.storeo(leftNode.getArgument(), reg);
+            }
             return;
         }
 
-        generateExpression(rightNode, 1);
-        generateExpression(leftNode, 0);
+        generateExpression(leftNode, reg);
+        generateExpression(rightNode, reg + 1);
 
         switch (node.getOperator()) {
             case OP_PLUSEQ:
@@ -167,57 +247,57 @@ public class CodeGenerator {
             case OP_DIVEQ:
             case OP_MODEQ:
                 if (node.getOperator() == OP_PLUSEQ) {
-                    putOpCode(L_ADD, reg, 0, 1);
+                    inst.add(reg, reg, reg + 1);
                 } else if (node.getOperator() == OP_MINUSEQ) {
-                    putOpCode(L_SUB, reg, 0, 1);
+                    inst.sub(reg, reg, reg + 1);
                 } else if (node.getOperator() == OP_MULTEQ) {
-                    putOpCode(L_MUL, reg, 0, 1);
+                    inst.mul(reg, reg, reg + 1);
                 } else if (node.getOperator() == OP_DIVEQ) {
-                    putOpCode(L_DIV, reg, 0, 1);
+                    inst.div(reg, reg, reg + 1);
                 } else {
-                    putOpCode(L_MOD, reg, 0, 1);
+                    inst.mod(reg, reg, reg + 1);
                 }
 
-                putOpCode(L_SETLOCAL, leftNode.getArgument(), reg);
+                generateVarStore(leftNode.getArgument(), reg, leftNode.getType() == ND_ID_OUTER);
                 return;
             case OP_PLUS:
-                putOpCode(L_ADD, reg, 0, 1);
+                inst.add(reg, reg, reg + 1);
                 break;
             case OP_MINUS:
-                putOpCode(L_SUB, reg, 0, 1);
+                inst.sub(reg, reg, reg + 1);
                 break;
             case OP_MULT:
-                putOpCode(L_MUL, reg, 0, 1);
+                inst.mul(reg, reg, reg + 1);
                 break;
             case OP_DIV:
-                putOpCode(L_DIV, reg, 0, 1);
+                inst.div(reg, reg, reg + 1);
                 break;
             case OP_MOD:
-                putOpCode(L_MOD, reg, 0, 1);
+                inst.mod(reg, reg, reg + 1);
                 break;
             case OP_LAND:
-                putOpCode(L_AND, reg, 0, 1);
+                inst.and(reg, reg, reg + 1);
                 break;
             case OP_LOR:
-                putOpCode(L_OR, reg, 0, 1);
+                inst.or(reg, reg, reg + 1);
                 break;
             case OP_EQ:
-                putOpCode(L_EQ, reg, 0, 1);
+                inst.eq(reg, reg, reg + 1);
                 break;
             case OP_NOTEQ:
-                putOpCode(L_NOTEQ, reg, 0, 1);
+                inst.neq(reg, reg, reg + 1);
                 break;
             case OP_GREAT:
-                putOpCode(L_GT, reg, 0, 1);
+                inst.gt(reg, reg, reg + 1);
                 break;
             case OP_GREATEQ:
-                putOpCode(L_GTEQ, reg, 0, 1);
+                inst.gteq(reg, reg, reg + 1);
                 break;
             case OP_LESS:
-                putOpCode(L_LT, reg, 0, 1);
+                inst.lt(reg, reg, reg + 1);
                 break;
             case OP_LESSEQ:
-                putOpCode(L_LTEQ, reg, 0, 1);
+                inst.lteq(reg, reg, reg + 1);
                 break;
             default:
                 throw unexpectedNodeException(node);
@@ -225,6 +305,8 @@ public class CodeGenerator {
     }
 
     private void generateUnaryOperator(Node node, int reg) throws SemanticException {
+        reserveRegisters(reg + 1);
+
         Node rightNode = node.getChild(0);
 
         switch (node.getOperator()) {
@@ -233,27 +315,43 @@ public class CodeGenerator {
             case OP_DPOSTPLUS:
             case OP_DPOSTMINUS:
                 int id = rightNode.getArgument();
-                if (node.getOperator() == OperatorType.OP_DPREPLUS || node.getOperator() == OperatorType.OP_DPREMINUS) {
-                    putOpCode(L_GETLOCAL, reg, id);
-                    putOpCode(node.getOperator() == OperatorType.OP_DPREPLUS ? L_INC : L_DEC);
-                    putOpCode(L_SETLOCAL, id, reg);
-                } else {
-                    putOpCode(L_GETLOCAL, reg, id);
-                    putOpCode(node.getOperator() == OperatorType.OP_DPOSTPLUS ? L_INC : L_DEC);
-                    putOpCode(L_SETLOCAL, id, reg);
+                NodeType type = rightNode.getType();
+                OperatorType op = node.getOperator();
+
+                switch (op) {
+                    case OP_DPREPLUS:
+                        generateVarLoad(reg, id, type == ND_ID_OUTER);
+                        inst.inc(reg, reg);
+                        generateVarStore(id, reg, type == ND_ID_OUTER);
+                        break;
+                    case OP_DPOSTPLUS:
+                        generateVarLoad(reg, id, type == ND_ID_OUTER);
+                        inst.inc(reg, reg);
+                        generateVarStore(id, reg, type == ND_ID_OUTER);
+                        break;
+                    case OP_DPREMINUS:
+                        generateVarLoad(reg, id, type == ND_ID_OUTER);
+                        inst.dec(reg, reg);
+                        generateVarStore(id, reg, type == ND_ID_OUTER);
+                        break;
+                    case OP_DPOSTMINUS:
+                        generateVarLoad(reg, id, type == ND_ID_OUTER);
+                        inst.dec(reg, reg);
+                        generateVarStore(id, reg, type == ND_ID_OUTER);
+                        break;
                 }
                 return;
             case OP_LNOT:
                 generateExpression(rightNode, reg);
-                putOpCode(L_NOT, reg);
+                inst.not(reg, reg);
                 break;
             case OP_MINUS:
                 generateExpression(rightNode, reg);
-                putOpCode(L_NEG, reg);
+                inst.neg(reg, reg);
                 break;
             case OP_PLUS:
                 generateExpression(rightNode, reg);
-                putOpCode(L_POS, reg);
+                inst.pos(reg, reg);
                 break;
             default:
                 throw unexpectedNodeException(node);
@@ -261,6 +359,8 @@ public class CodeGenerator {
     }
 
     private void generateExpression(Node node, int reg) throws SemanticException {
+        reserveRegisters(reg + 1);
+
         switch (node.getType()) {
             case ND_BINOP_EXPR:
                 generateBinaryOperator(node, reg);
@@ -269,23 +369,29 @@ public class CodeGenerator {
                 generateUnaryOperator(node, reg);
                 return;
             case ND_ID_LOCAL:
-                putOpCode(L_GETLOCAL, reg, node.getArgument());
+                inst.load(reg, node.getArgument());
                 break;
             case ND_ID_OUTER:
-                putOpCode(L_GETOUTER, reg, node.getArgument());
+                inst.loado(reg, node.getArgument());
+                break;
+            case ND_ARRAY:
+                generateArray(node, reg);
+                break;
+            case ND_OBJECT:
+                generateObject(node, reg);
                 break;
             case ND_NUMBER:
             case ND_STRING:
-                putOpCode(L_CONST, reg, node.getArgument());
+                inst.loadc(reg, node.getArgument());
                 break;
             case ND_BOOLEAN:
-                putOpCode(L_BOOLEAN, reg, node.getArgument());
+                inst.loadb(reg, node.getArgument());
                 break;
             case ND_NULL:
-                putOpCode(L_NULL, reg);
+                inst.loadn(reg);
                 break;
             case ND_UNDEFINED:
-                putOpCode(L_UNDEFINED, reg);
+                inst.loadu(reg);
                 break;
             case ND_CALL:
                 generateFunctionCall(node, reg);
@@ -293,21 +399,32 @@ public class CodeGenerator {
             case ND_FUNC_DEF:
                 generateFunctionDefinition(node, reg);
                 break;
+            case ND_INDEX_SEL:
+                generateIndexSelect(node, reg);
+                break;
+            case ND_INDEX_SET:
+                generateIndexSet(node, reg);
+                break;
             case ND_FIELD_SEL:
                 generateFieldSelect(node, reg);
+                break;
+            case ND_FIELD_SET:
+                generateFieldSet(node, reg);
                 break;
             default:
                 throw unexpectedNodeException(node);
         }
     }
 
-    private int generateExpressionListStack(Node node) throws SemanticException {
+    private int generateExpressionListStack(Node node, int reg) throws SemanticException {
+        reserveRegisters(reg + 1);
+
         Node curr = node;
 
         int count = 0;
         while (!checkNodeType(curr, ND_EMPTY)) {
-            generateExpression(curr.getChild(0), 0);
-            putOpCode(L_PUSH, 0);
+            generateExpression(curr.getChild(0), reg);
+            inst.push(reg);
             curr = curr.getChild(1);
             count++;
         }
@@ -316,6 +433,8 @@ public class CodeGenerator {
     }
 
     private void generateExpressionStatement(Node node, int reg) throws SemanticException {
+        reserveRegisters(reg + 1);
+
         Node curr = node;
 
         while (!checkNodeType(curr, ND_EMPTY)) {
@@ -325,12 +444,12 @@ public class CodeGenerator {
     }
 
     private void generateVariableInit(Node node) throws SemanticException {
-        int id = node.getArgument();
+        reserveRegisters(1);
 
         Node initNode = node.getChild(0);
         if (!checkNodeType(initNode, ND_EMPTY)) {
             generateExpression(initNode, 0);
-            putOpCode(L_SETLOCAL, id, 0);
+            inst.store(node.getArgument(), 0);
         }
 
         Node nextVar = node.getChild(1);
@@ -340,42 +459,44 @@ public class CodeGenerator {
     }
 
     private void generateIf(Node node) throws SemanticException {
+        reserveRegisters(1);
+
         generateExpression(node.getChild(0), 0);
 
-        OpCode jmpf = putOpCode(L_JMPF);
-        jmpf.b = 0;
-        int cur = opCodes.size();
+        Instruction jmpf = inst.jmpf(0, 0);
+        int cur = inst.getInstructions().size();
 
         generateStatement(node.getChild(1));
-        jmpf.a = opCodes.size() - cur;
+        jmpf.b = inst.getInstructions().size() - cur;
     }
 
     private void generateIfElse(Node node) throws SemanticException {
+        reserveRegisters(1);
+
         generateExpression(node.getChild(0), 0);
 
-        OpCode jmpf = putOpCode(L_JMPF);
-        jmpf.b = 0;
-        int curf = opCodes.size();
+        Instruction jmpf = inst.jmpf(0, 0);
+        int curf = inst.getInstructions().size();
 
         generateStatement(node.getChild(1));
 
-        OpCode jmp = putOpCode(L_JMP);
-        int cur = opCodes.size();
+        Instruction jmp = inst.jmp(0);
+        int cur = inst.getInstructions().size();
 
         generateStatement(node.getChild(2));
-        jmpf.a = opCodes.size() - curf;
-        jmp.a = opCodes.size() - cur;
+        jmpf.b = inst.getInstructions().size() - curf;
+        jmp.a = inst.getInstructions().size() - cur;
     }
 
     private void generateBreak(Node node) throws SemanticException {
         if (loopLevel <= 0) throw semanticException(node, "break not in loop");
-        putOpCode(L_JMP);
+        inst.jmp(0);
         putBreak();
     }
 
     private void generateContinue(Node node) throws SemanticException {
         if (loopLevel <= 0) throw semanticException(node, "continue not in loop");
-        putOpCode(L_JMP);
+        inst.jmp(0);
         putContinue();
     }
 
@@ -384,52 +505,53 @@ public class CodeGenerator {
         if (!checkNodeType(expr, ND_EMPTY)) {
             generateExpression(node.getChild(0), 0);
         } else {
-            putOpCode(L_UNDEFINED, 0);
+            inst.loadu(0);
         }
-        putOpCode(L_RET, 0);
+        inst.ret(0);
     }
 
     private void generateWhile(Node node) throws SemanticException {
-        loopLevel++;
+        reserveRegisters(1);
 
-        int curback = opCodes.size();
+        loopLevel++;
+        int curback = inst.getInstructions().size();
 
         generateExpression(node.getChild(0), 0);
 
-        OpCode jmp = putOpCode(L_JMPF, 0, 0);
-
-        int cur = opCodes.size();
+        Instruction jmpf = inst.jmpf(0, 0);
+        int cur = inst.getInstructions().size();
 
         generateStatement(node.getChild(1));
 
-        putOpCode(L_JMP, curback - opCodes.size() + 1);
-        jmp.a = opCodes.size() - cur;
+        inst.jmp(curback - inst.getInstructions().size() + 1);
+        jmpf.b = inst.getInstructions().size() - cur;
 
         processBrCont(curback);
-
         loopLevel--;
     }
 
     private void generateFor(Node node) throws SemanticException {
+        reserveRegisters(1);
+
         loopLevel++;
         Node preExpr = node.getChild(0);
         if (!checkNodeType(preExpr, ND_EMPTY)) {
             if (preExpr.getType() == ND_VARINIT_STMT) {
                 generateVariableInit(preExpr);
             } else {
-                generateExpressionStatement(preExpr, 0);
+                generateExpressionStatement(preExpr, 0); // ignore statement result
             }
         }
-        int curback = opCodes.size();
+        int curback = inst.getInstructions().size();
 
-        OpCode jmp = null;
+        Instruction jmpf = null;
         Node condExpr = node.getChild(1);
         if (!checkNodeType(condExpr, ND_EMPTY)) {
             generateExpression(condExpr, 0);
-            jmp = putOpCode(L_JMPF, 0);
+            jmpf = inst.jmpf(0,  0);
         }
 
-        int cur = opCodes.size();
+        int cur = inst.getInstructions().size();
         Node stmt = node.getChild(3);
         generateStatement(stmt);
 
@@ -437,16 +559,18 @@ public class CodeGenerator {
         if (!checkNodeType(postExpr, ND_EMPTY)) {
             generateExpressionStatement(postExpr, 0);
         }
-        putOpCode(L_JMP, curback - opCodes.size() + 1);
-        if (jmp != null) jmp.a = opCodes.size() - cur;
+        inst.jmp(curback - inst.getInstructions().size() + 1);
+        if (jmpf != null) jmpf.b = inst.getInstructions().size() - cur;
 
         processBrCont(curback);
         loopLevel--;
     }
 
     private void generateImport(Node node) throws SemanticException {
-        putOpCode(L_IMPORT, node.getArgument());
-        putOpCode(L_SETLOCAL, node.getChild(0).getArgument(), 0);
+        reserveRegisters(1);
+
+        inst.imp(0, node.getArgument());
+        inst.store(node.getChild(0).getArgument(), 0);
     }
 
     private void generateStatement(Node node) throws SemanticException {
@@ -475,7 +599,7 @@ public class CodeGenerator {
                 generateFor(node);
                 return;
             case ND_CALL:
-                generateFunctionCall(node, 0);
+                generateFunctionCall(node, 0); // ignore statement result
                 return;
             case ND_BREAK:
                 generateBreak(node);
@@ -487,7 +611,7 @@ public class CodeGenerator {
                 generateReturn(node);
                 return;
             case ND_EXPR_STMT:
-                generateExpressionStatement(node, 0);
+                generateExpressionStatement(node, 0); // ignore statement result
                 return;
             default:
                 throw unexpectedNodeException(node);
@@ -516,12 +640,16 @@ public class CodeGenerator {
     public Blueprint generate() throws SemanticException {
         generateStatement(semanticInfo.getRoot());
 
-        OpCode[] code = opCodes.toArray(new OpCode[0]);
+        Instruction[] code = inst.getInstructions().toArray(new Instruction[0]);
         LargoValue[] constantPool = semanticInfo.getConstPool();
+        int registersCount = maxRegistersCount;
         int argumentsCount = semanticInfo.getArgumentsCount();
+        int variablesCount = maxVariablesCount;
         int localVariablesCount = semanticInfo.getLocalVariablesCount();
+        int callStackSize = maxCallStackSize;
         Blueprint[] blueprintsArray = blueprints.toArray(new Blueprint[0]);
 
-        return new Blueprint(code, constantPool, argumentsCount, localVariablesCount, localVariablesCount + maxStackSize, blueprintsArray);
+
+        return new Blueprint(code, constantPool, registersCount, argumentsCount, variablesCount, localVariablesCount, callStackSize, blueprintsArray);
     }
 }

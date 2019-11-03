@@ -104,6 +104,8 @@ public abstract class Utils {
                 return OP_LESSEQ;
             case TK_OPEN_PAR:
                 return OP_CALL;
+            case TK_OPEN_BR:
+                return OP_INDEX_SEL;
             case TK_DOT:
                 return OP_FIELD_SEL;
             case TK_ARROW:

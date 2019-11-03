@@ -1,19 +1,19 @@
 package com.bunjlabs.largo.compiler.codegen;
 
-import com.bunjlabs.largo.runtime.OpCode;
+import com.bunjlabs.largo.Instruction;
 
 class FlowBreak {
-    private final OpCode opcode;
+    private final Instruction opcode;
     private final int pos;
     private final int loopLevel;
 
-    FlowBreak(OpCode opcode, int pos, int loopLevel) {
+    FlowBreak(Instruction opcode, int pos, int loopLevel) {
         this.opcode = opcode;
         this.pos = pos;
         this.loopLevel = loopLevel;
     }
 
-    OpCode getOpcode() {
+    Instruction getInstruction() {
         return opcode;
     }
 

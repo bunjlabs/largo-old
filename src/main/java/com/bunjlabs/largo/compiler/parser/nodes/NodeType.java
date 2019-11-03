@@ -21,7 +21,12 @@ public enum NodeType {
     // Expressions
     ND_BINOP_EXPR,        // Binary operator (+, -, *, +=, -=, ...)
     ND_UNOP_EXPR,         // Unary operator (-a, ++a, --a, )
-    ND_FIELD_SEL,         // Field select (.)
+    ND_ARRAY,             // array expression
+    ND_OBJECT,             // array expression
+    ND_FIELD_SEL,         // Field select (*.*)
+    ND_FIELD_SET,         // Field select (*.*=*)
+    ND_INDEX_SEL,         // Index select ([i])
+    ND_INDEX_SET,         // Index select ([i]=*)
 
     // Expressions with data
     ND_NULL,

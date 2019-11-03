@@ -1,49 +1,45 @@
 package com.bunjlabs.largo.lib;
 
-import com.bunjlabs.largo.lib.functions.LibFunctions;
-import com.bunjlabs.largo.types.LargoDouble;
-import com.bunjlabs.largo.types.LargoInteger;
-import com.bunjlabs.largo.types.LargoString;
-import com.bunjlabs.largo.types.LargoValue;
+import com.bunjlabs.largo.types.*;
 
 public class MathLib extends LargoLibrary {
 
-    public static final MathLib MATH = new MathLib();
+    public static final MathLib LIB = new MathLib();
 
     private MathLib() {
         set(LargoString.from("E"), LargoDouble.from(Math.E));
         set(LargoString.from("PI"), LargoDouble.from(Math.PI));
 
-        set(LargoString.from("sin"), LibFunctions.biFunction(this::sin));
-        set(LargoString.from("cos"), LibFunctions.biFunction(this::cos));
-        set(LargoString.from("tan"), LibFunctions.biFunction(this::tan));
-        set(LargoString.from("asin"), LibFunctions.biFunction(this::asin));
-        set(LargoString.from("acos"), LibFunctions.biFunction(this::acos));
-        set(LargoString.from("atan"), LibFunctions.biFunction(this::atan));
-        set(LargoString.from("toRadians"), LibFunctions.biFunction(this::toRadians));
-        set(LargoString.from("toDegrees"), LibFunctions.biFunction(this::toDegrees));
-        set(LargoString.from("exp"), LibFunctions.biFunction(this::exp));
-        set(LargoString.from("log"), LibFunctions.biFunction(this::log));
-        set(LargoString.from("log10"), LibFunctions.biFunction(this::log10));
-        set(LargoString.from("sqrt"), LibFunctions.biFunction(this::sqrt));
-        set(LargoString.from("cbrt"), LibFunctions.biFunction(this::cbrt));
-        set(LargoString.from("ceil"), LibFunctions.biFunction(this::ceil));
-        set(LargoString.from("floor"), LibFunctions.biFunction(this::floor));
-        set(LargoString.from("rint"), LibFunctions.biFunction(this::rint));
-        set(LargoString.from("atan2"), LibFunctions.varArgFunction(this::atan2));
-        set(LargoString.from("pow"), LibFunctions.varArgFunction(this::pow));
-        set(LargoString.from("round"), LibFunctions.biFunction(this::round));
-        set(LargoString.from("random"), LibFunctions.function(this::random));
-        set(LargoString.from("abs"), LibFunctions.biFunction(this::abs));
-        set(LargoString.from("max"), LibFunctions.varArgFunction(this::max));
-        set(LargoString.from("min"), LibFunctions.varArgFunction(this::min));
-        set(LargoString.from("sinh"), LibFunctions.biFunction(this::sinh));
-        set(LargoString.from("cosh"), LibFunctions.biFunction(this::cosh));
-        set(LargoString.from("tanh"), LibFunctions.biFunction(this::tanh));
-        set(LargoString.from("hypot"), LibFunctions.varArgFunction(this::hypot));
-        set(LargoString.from("expm1"), LibFunctions.biFunction(this::expm1));
-        set(LargoString.from("log1p"), LibFunctions.biFunction(this::log1p));
-        set(LargoString.from("getExponent"), LibFunctions.biFunction(this::getExponent));
+        set(LargoString.from("sin"), LargoFunction.fromBiFunction(this::sin));
+        set(LargoString.from("cos"), LargoFunction.fromBiFunction(this::cos));
+        set(LargoString.from("tan"), LargoFunction.fromBiFunction(this::tan));
+        set(LargoString.from("asin"), LargoFunction.fromBiFunction(this::asin));
+        set(LargoString.from("acos"), LargoFunction.fromBiFunction(this::acos));
+        set(LargoString.from("atan"), LargoFunction.fromBiFunction(this::atan));
+        set(LargoString.from("toRadians"), LargoFunction.fromBiFunction(this::toRadians));
+        set(LargoString.from("toDegrees"), LargoFunction.fromBiFunction(this::toDegrees));
+        set(LargoString.from("exp"), LargoFunction.fromBiFunction(this::exp));
+        set(LargoString.from("log"), LargoFunction.fromBiFunction(this::log));
+        set(LargoString.from("log10"), LargoFunction.fromBiFunction(this::log10));
+        set(LargoString.from("sqrt"), LargoFunction.fromBiFunction(this::sqrt));
+        set(LargoString.from("cbrt"), LargoFunction.fromBiFunction(this::cbrt));
+        set(LargoString.from("ceil"), LargoFunction.fromBiFunction(this::ceil));
+        set(LargoString.from("floor"), LargoFunction.fromBiFunction(this::floor));
+        set(LargoString.from("rint"), LargoFunction.fromBiFunction(this::rint));
+        set(LargoString.from("atan2"), LargoFunction.fromVarArgFunction(this::atan2));
+        set(LargoString.from("pow"), LargoFunction.fromVarArgFunction(this::pow));
+        set(LargoString.from("round"), LargoFunction.fromBiFunction(this::round));
+        set(LargoString.from("random"), LargoFunction.fromFunction(this::random));
+        set(LargoString.from("abs"), LargoFunction.fromBiFunction(this::abs));
+        set(LargoString.from("max"), LargoFunction.fromVarArgFunction(this::max));
+        set(LargoString.from("min"), LargoFunction.fromVarArgFunction(this::min));
+        set(LargoString.from("sinh"), LargoFunction.fromBiFunction(this::sinh));
+        set(LargoString.from("cosh"), LargoFunction.fromBiFunction(this::cosh));
+        set(LargoString.from("tanh"), LargoFunction.fromBiFunction(this::tanh));
+        set(LargoString.from("hypot"), LargoFunction.fromVarArgFunction(this::hypot));
+        set(LargoString.from("expm1"), LargoFunction.fromBiFunction(this::expm1));
+        set(LargoString.from("log1p"), LargoFunction.fromBiFunction(this::log1p));
+        set(LargoString.from("getExponent"), LargoFunction.fromBiFunction(this::getExponent));
     }
 
     private LargoValue sin(LargoValue ctx, LargoValue a) {

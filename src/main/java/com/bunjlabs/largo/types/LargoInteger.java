@@ -14,7 +14,7 @@ public class LargoInteger extends LargoNumber {
 
     private final int value;
 
-    LargoInteger(int value) {
+    private LargoInteger(int value) {
         this.value = value;
     }
 
@@ -40,6 +40,11 @@ public class LargoInteger extends LargoNumber {
     @Override
     public boolean asJBoolean() {
         return value > 0;
+    }
+
+    @Override
+    public Object asJObject() {
+        return value;
     }
 
     @Override
@@ -73,22 +78,22 @@ public class LargoInteger extends LargoNumber {
     }
 
     @Override
-    public LargoValue addTo(String lv) {
+    LargoValue addTo(String lv) {
         return LargoString.from(lv + value);
     }
 
     @Override
-    public LargoValue addTo(boolean lv) {
+    LargoValue addTo(boolean lv) {
         return lv ? LargoInteger.from(1 + value) : this;
     }
 
     @Override
-    public LargoValue addTo(double lv) {
+    LargoValue addTo(double lv) {
         return LargoDouble.from(lv + value);
     }
 
     @Override
-    public LargoValue addTo(int lv) {
+    LargoValue addTo(int lv) {
         return LargoInteger.from(lv + value);
     }
 
@@ -98,22 +103,22 @@ public class LargoInteger extends LargoNumber {
     }
 
     @Override
-    public LargoValue subFrom(String lv) {
+    LargoValue subFrom(String lv) {
         return LargoDouble.NaN;
     }
 
     @Override
-    public LargoValue subFrom(boolean lv) {
+    LargoValue subFrom(boolean lv) {
         return LargoInteger.from((lv ? 1 : 0) - value);
     }
 
     @Override
-    public LargoValue subFrom(double lv) {
+    LargoValue subFrom(double lv) {
         return LargoDouble.from(lv - value);
     }
 
     @Override
-    public LargoValue subFrom(int lv) {
+    LargoValue subFrom(int lv) {
         return LargoInteger.from(lv - value);
     }
 
@@ -123,22 +128,22 @@ public class LargoInteger extends LargoNumber {
     }
 
     @Override
-    public LargoValue mulWith(String lv) {
+    LargoValue mulWith(String lv) {
         return LargoDouble.NaN;
     }
 
     @Override
-    public LargoValue mulWith(boolean lv) {
+    LargoValue mulWith(boolean lv) {
         return lv ? this : LargoInteger.ZERO;
     }
 
     @Override
-    public LargoValue mulWith(double lv) {
+    LargoValue mulWith(double lv) {
         return LargoDouble.from(lv * value);
     }
 
     @Override
-    public LargoValue mulWith(int lv) {
+    LargoValue mulWith(int lv) {
         return LargoInteger.from(lv * value);
     }
 
@@ -148,22 +153,22 @@ public class LargoInteger extends LargoNumber {
     }
 
     @Override
-    public LargoValue divInto(String lv) {
+    LargoValue divInto(String lv) {
         return LargoDouble.NaN;
     }
 
     @Override
-    public LargoValue divInto(boolean lv) {
+    LargoValue divInto(boolean lv) {
         return lv ? LargoDouble.from(1.0 / value) : LargoInteger.ZERO;
     }
 
     @Override
-    public LargoValue divInto(double lv) {
+    LargoValue divInto(double lv) {
         return LargoDouble.from(lv / value);
     }
 
     @Override
-    public LargoValue divInto(int lv) {
+    LargoValue divInto(int lv) {
         return LargoDouble.from(lv / value);
     }
 
@@ -173,22 +178,22 @@ public class LargoInteger extends LargoNumber {
     }
 
     @Override
-    public LargoValue modFrom(String lv) {
+    LargoValue modFrom(String lv) {
         return LargoDouble.NaN;
     }
 
     @Override
-    public LargoValue modFrom(boolean lv) {
+    LargoValue modFrom(boolean lv) {
         return value == 0 ? LargoDouble.NaN : LargoInteger.from((lv ? 1 : 0) % value);
     }
 
     @Override
-    public LargoValue modFrom(double lv) {
+    LargoValue modFrom(double lv) {
         return LargoDouble.from(lv % value);
     }
 
     @Override
-    public LargoValue modFrom(int lv) {
+    LargoValue modFrom(int lv) {
         return LargoInteger.from(lv % value);
     }
 

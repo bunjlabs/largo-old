@@ -14,7 +14,8 @@ repositories {
 
 group = 'com.bunjlabs.largo'
 version = '0.1-SNAPSHOT'
-sourceCompatibility = '8'
+sourceCompatibility = '11'
+targetCompatibility = '11'
 
 test {
     useJUnitPlatform()

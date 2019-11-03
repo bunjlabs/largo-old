@@ -1,8 +1,5 @@
 package com.bunjlabs.largo.types;
 
-import com.bunjlabs.largo.types.prototype.LargoPrototype;
-import com.bunjlabs.largo.types.prototype.LargoStringPrototype;
-
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.Locale;
@@ -28,7 +25,7 @@ public class LargoString extends LargoValue {
     }
 
     public LargoPrototype getPrototype() {
-        return prototype;
+        return LargoPrototypes.STRING;
     }
 
     @Override
@@ -57,6 +54,11 @@ public class LargoString extends LargoValue {
     @Override
     public boolean asJBoolean() {
         return !value.isEmpty();
+    }
+
+    @Override
+    public Object asJObject() {
+        return value;
     }
 
     @Override

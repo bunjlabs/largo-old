@@ -1,6 +1,7 @@
 package com.bunjlabs.largo.compiler.semantic;
 
 import com.bunjlabs.largo.compiler.SemanticException;
+import com.bunjlabs.largo.compiler.parser.Parser;
 import com.bunjlabs.largo.compiler.parser.nodes.Node;
 import com.bunjlabs.largo.compiler.parser.nodes.NodeType;
 import com.bunjlabs.largo.compiler.parser.nodes.OperatorType;
@@ -14,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static com.bunjlabs.largo.compiler.Utils.*;
+import static com.bunjlabs.largo.compiler.Utils.checkNodeType;
 import static com.bunjlabs.largo.compiler.parser.nodes.NodeType.*;
 import static com.bunjlabs.largo.compiler.parser.nodes.OperatorType.*;
 
@@ -21,8 +23,9 @@ public class SemanticAnalyzer {
 
     private static final NodeType[] EXPRESSION_TYPES = new NodeType[]{
             ND_UNOP_EXPR, ND_BINOP_EXPR, ND_FUNC_DEF, ND_CALL,
-            ND_FIELD_SEL, ND_ID_LOCAL, ND_ID_OUTER, ND_NUMBER,
-            ND_BOOLEAN, ND_STRING, ND_NULL, ND_UNDEFINED};
+            ND_INDEX_SEL, ND_INDEX_SET, ND_FIELD_SEL, ND_FIELD_SET,
+            ND_ID_LOCAL, ND_ID_OUTER, ND_ARRAY, ND_OBJECT,
+            ND_NUMBER, ND_BOOLEAN, ND_STRING, ND_NULL, ND_UNDEFINED};
 
     private static final NodeType[] STATEMENT_TYPES = new NodeType[]{
             ND_STMT_LIST, ND_VARINIT_STMT, ND_IMPORT, ND_IF_STMT,
@@ -67,14 +70,12 @@ public class SemanticAnalyzer {
 
     private void analyzeId(Node node) throws SemanticException {
         int localId = localIdTable.getId(node.getString());
-
         if (localId >= 0) {
             node.setArgument(localId);
             return;
         }
 
         int outerId = outerIdTable.getId(node.getString());
-
         if (outerId >= 0) {
             node.setType(ND_ID_OUTER);
             node.setArgument(outerId);
@@ -82,6 +83,49 @@ public class SemanticAnalyzer {
         }
 
         throw new SemanticException(node, "Undefined variable: " + node.getString());
+    }
+
+    private void analyzeArray(Node node) throws SemanticException {
+        if (!checkNodeChildsForNull(node, 1)) {
+            throw semanticException(node, "ArrayExpression must have one child for ExpressionList, Expression or Empty");
+        }
+
+        Node expr = node.getChild(0);
+        if (!checkNodeType(expr, ND_EXPR_LIST) && !checkNodeType(expr, EXPRESSION_TYPES) && !checkNodeType(expr, ND_EMPTY)) {
+            throw semanticException(node, "ArrayExpression first child must be ExpressionList, Expression or Empty");
+        }
+
+        if (expr.getType() != ND_EMPTY) {
+            analyzeExpressionList(expr);
+        }
+    }
+
+    private void analyzeObject(Node node) throws SemanticException {
+        // nothing here
+    }
+
+    private void analyzeExpressionList(Node node) throws SemanticException {
+        if (node.getType() != ND_EXPR_LIST) {
+            analyzeExpression(node);
+            return;
+        }
+
+        if (!checkNodeChildsForNull(node, 2)) {
+            throw semanticException(node, "ExpressionList must have two childs for Expression and ExpressionList or one child for Expression");
+        }
+
+        Node curr = node;
+        while (curr.getType() != ND_EMPTY) {
+            Node expr = curr.getChild(0);
+
+            if (!checkNodeType(expr, EXPRESSION_TYPES)) {
+                throw semanticException(node, "First child in ExpressionList must be Expression");
+            }
+
+            analyzeExpression(expr);
+
+            curr = curr.getChild(1);
+        }
     }
 
     private void analyzeUnaryOperatorExpression(Node node) throws SemanticException {
@@ -120,17 +164,17 @@ public class SemanticAnalyzer {
             analyzeId(leftExpr);
 
             if (!checkNodeType(rightExpr, EXPRESSION_TYPES)) {
-                throw semanticException(node, "Second operator must have be an Expression");
+                throw semanticException(node, "Second operator must be an Expression");
             }
 
             analyzeExpression(rightExpr);
 
         } else if (checkNodeOperator(node, NON_ASSIGN_OPERATOR_TYPES)) {
             if (!checkNodeType(leftExpr, EXPRESSION_TYPES)) {
-                throw semanticException(node, "Second operator must have be an Expression");
+                throw semanticException(node, "Second operator must be an Expression");
             }
             if (!checkNodeType(rightExpr, EXPRESSION_TYPES)) {
-                throw semanticException(node, "Second operator must have be an Expression");
+                throw semanticException(node, "Second operator must be an Expression");
             }
 
             analyzeExpression(leftExpr);
@@ -141,7 +185,7 @@ public class SemanticAnalyzer {
     }
 
     private void analyzeFunctionDefinitionIds(Node node) throws SemanticException {
-        if (node.getType() == ND_ID_LOCAL) {
+        if (checkNodeType(node, ND_ID_LOCAL, ND_EMPTY)) {
             return;
         }
 
@@ -150,7 +194,6 @@ public class SemanticAnalyzer {
         }
 
         Node curr = node;
-
         while (curr.getType() != ND_EMPTY) {
             Node expr = curr.getChild(0);
 
@@ -170,8 +213,8 @@ public class SemanticAnalyzer {
         Node args = node.getChild(0);
         Node body = node.getChild(1);
 
-        if (!checkNodeType(args, ND_EXPR_LIST, ND_ID_LOCAL)) {
-            throw semanticException(node, "FunctionDefinition first child must be ExpressionList or Id");
+        if (!checkNodeType(args, ND_EXPR_LIST, ND_ID_LOCAL, ND_EMPTY)) {
+            throw semanticException(node, "FunctionDefinition first child must be ExpressionList, Id or Empty");
         }
 
         if (!checkNodeType(body, STATEMENT_TYPES)) {
@@ -192,37 +235,10 @@ public class SemanticAnalyzer {
             }
         }
 
-
         SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer(body, funcArguments, localIdTable);
         SemanticInfo semanticInfo = semanticAnalyzer.analyze();
 
         node.setArgument(blueprintTable.getId(semanticInfo));
-    }
-
-
-    private void analyzeFunctionArguments(Node node) throws SemanticException {
-        if (node.getType() != ND_EXPR_LIST) {
-            analyzeExpression(node);
-            return;
-        }
-
-        if (!checkNodeChildsForNull(node, 2)) {
-            throw semanticException(node, "FuncArg must have two childs for Expression and FuncArg or one child of Expression");
-        }
-
-        Node curr = node;
-
-        while (curr.getType() != ND_EMPTY) {
-            Node expr = curr.getChild(0);
-
-            if (!checkNodeType(expr, EXPRESSION_TYPES)) {
-                throw semanticException(node, "First child in ExpressionList must be Expression");
-            }
-
-            analyzeExpression(expr);
-
-            curr = curr.getChild(1);
-        }
     }
 
     private void analyzeFunctionCall(Node node) throws SemanticException {
@@ -241,7 +257,55 @@ public class SemanticAnalyzer {
         }
 
         analyzeExpression(expr);
-        if (args.getType() != ND_EMPTY) analyzeFunctionArguments(args);
+        if (args.getType() != ND_EMPTY) {
+            analyzeExpressionList(args);
+        }
+    }
+
+    private void analyzeIndexSelect(Node node) throws SemanticException {
+        if (!checkNodeChildsForNull(node, 2)) {
+            throw semanticException(node, "FieldSelect must have two childs for left expression and index expression");
+        }
+
+        Node expr = node.getChild(0);
+        Node index = node.getChild(1);
+
+        if (!checkNodeType(expr, EXPRESSION_TYPES)) {
+            throw semanticException(node, "FieldSelect first child must be Expression");
+        }
+
+        if (!checkNodeType(index, EXPRESSION_TYPES)) {
+            throw semanticException(node, "FieldSelect second child must be Expression");
+        }
+
+        analyzeExpression(expr);
+        analyzeExpression(index);
+    }
+
+    private void analyzeIndexSet(Node node) throws SemanticException {
+        if (!checkNodeChildsForNull(node, 3)) {
+            throw semanticException(node, "IndexSet must have three childs for left expression, index expression and right expression");
+        }
+
+        Node leftExpr = node.getChild(0);
+        Node index = node.getChild(1);
+        Node rightExpr = node.getChild(2);
+
+        if (!checkNodeType(leftExpr, EXPRESSION_TYPES)) {
+            throw semanticException(node, "IndexSet first child must be Expression");
+        }
+
+        if (!checkNodeType(index, EXPRESSION_TYPES)) {
+            throw semanticException(node, "IndexSet second child must be Expression");
+        }
+
+        if (!checkNodeType(rightExpr, EXPRESSION_TYPES)) {
+            throw semanticException(node, "IndexSes third child must be Expression");
+        }
+
+        analyzeExpression(leftExpr);
+        analyzeExpression(index);
+        analyzeExpression(rightExpr);
     }
 
     private void analyzeFieldSelect(Node node) throws SemanticException {
@@ -264,6 +328,32 @@ public class SemanticAnalyzer {
         id.setArgument(constTable.getId(LargoString.from(id.getString())));
     }
 
+    private void analyzeFieldSet(Node node) throws SemanticException {
+        if (!checkNodeChildsForNull(node, 3)) {
+            throw semanticException(node, "FieldSet must have three childs for left expression, index expression and right expression");
+        }
+
+        Node leftExpr = node.getChild(0);
+        Node id = node.getChild(1);
+        Node rightExpr = node.getChild(2);
+
+        if (!checkNodeType(leftExpr, EXPRESSION_TYPES)) {
+            throw semanticException(node, "FieldSet first child must be Expression");
+        }
+
+        if (!checkNodeType(id, ND_ID_LOCAL)) {
+            throw semanticException(node, "FieldSet second child must be Id");
+        }
+
+        if (!checkNodeType(rightExpr, EXPRESSION_TYPES)) {
+            throw semanticException(node, "FieldSet third child must be Expression");
+        }
+
+        analyzeExpression(leftExpr);
+        id.setArgument(constTable.getId(LargoString.from(id.getString())));
+        analyzeExpression(rightExpr);
+    }
+
     private void analyzeExpression(Node node) throws SemanticException {
         switch (node.getType()) {
             case ND_UNOP_EXPR:
@@ -278,11 +368,26 @@ public class SemanticAnalyzer {
             case ND_CALL:
                 analyzeFunctionCall(node);
                 return;
+            case ND_INDEX_SEL:
+                analyzeIndexSelect(node);
+                return;
+            case ND_INDEX_SET:
+                analyzeIndexSet(node);
+                return;
             case ND_FIELD_SEL:
                 analyzeFieldSelect(node);
                 return;
+            case ND_FIELD_SET:
+                analyzeFieldSet(node);
+                return;
             case ND_ID_LOCAL:
                 analyzeId(node);
+                return;
+            case ND_ARRAY:
+                analyzeArray(node);
+                return;
+            case ND_OBJECT:
+                analyzeObject(node);
                 return;
             case ND_NUMBER:
                 LargoNumber numberValue = LargoNumber.from(Double.parseDouble(node.getString()));

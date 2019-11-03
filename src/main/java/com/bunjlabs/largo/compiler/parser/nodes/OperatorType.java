@@ -37,6 +37,7 @@ public enum OperatorType {
     OP_LESSEQ(1),   // <=
 
     OP_CALL(13),
+    OP_INDEX_SEL(13),
     OP_FIELD_SEL(13),
     OP_ARROW_FUNC(14),
 

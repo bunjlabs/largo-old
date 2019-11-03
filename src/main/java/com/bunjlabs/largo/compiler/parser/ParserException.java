@@ -1,9 +1,9 @@
 package com.bunjlabs.largo.compiler.parser;
 
-import com.bunjlabs.largo.compiler.CompilatorException;
+import com.bunjlabs.largo.compiler.CompilationException;
 import com.bunjlabs.largo.compiler.lexer.Lexer;
 
-public class ParserException extends CompilatorException {
+public class ParserException extends CompilationException {
     public ParserException() {
     }
 

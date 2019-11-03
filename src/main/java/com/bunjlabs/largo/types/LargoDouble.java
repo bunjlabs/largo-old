@@ -8,7 +8,7 @@ public class LargoDouble extends LargoNumber {
 
     private final double value;
 
-    LargoDouble(double value) {
+    private LargoDouble(double value) {
         this.value = value;
     }
 
@@ -34,6 +34,11 @@ public class LargoDouble extends LargoNumber {
     @Override
     public boolean asJBoolean() {
         return value > 0;
+    }
+
+    @Override
+    public Object asJObject() {
+        return value;
     }
 
     @Override

@@ -1,15 +1,67 @@
 package com.bunjlabs.largo.types;
 
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+
 public abstract class LargoFunction extends LargoValue {
 
-    private final LargoValue context;
-
-    protected LargoFunction() {
-        this.context = this;
+    public static LargoFunction fromFunction(Function<LargoValue, LargoValue> function) {
+        return new LargoFunction() {
+            @Override
+            public LargoValue call(LargoValue context, LargoValue[] args) {
+                return function.apply(context);
+            }
+        };
     }
 
-    protected LargoFunction(LargoValue context) {
-        this.context = context;
+    public static LargoFunction fromVarArgFunction(BiFunction<LargoValue, LargoValue[], LargoValue> function) {
+        return new LargoFunction() {
+            @Override
+            public LargoValue call(LargoValue context, LargoValue[] args) {
+                return function.apply(context, args);
+            }
+        };
+    }
+
+    public static LargoFunction fromBiFunction(BiFunction<LargoValue, LargoValue, LargoValue> function) {
+        return new LargoFunction() {
+            @Override
+            public LargoValue call(LargoValue context, LargoValue[] args) {
+                return function.apply(context, args.length > 0 ? args[0] : LargoUndefined.UNDEFINED);
+            }
+        };
+    }
+
+    public static LargoFunction fromConsumer(Consumer<LargoValue> function) {
+        return new LargoFunction() {
+            @Override
+            public LargoValue call(LargoValue context, LargoValue[] args) {
+                function.accept(context);
+                return LargoUndefined.UNDEFINED;
+            }
+        };
+    }
+
+    public static LargoFunction fromBiConsumer(BiConsumer<LargoValue, LargoValue> function) {
+        return new LargoFunction() {
+            @Override
+            public LargoValue call(LargoValue context, LargoValue[] args) {
+                function.accept(context, args.length > 0 ? args[0] : LargoUndefined.UNDEFINED);
+                return LargoUndefined.UNDEFINED;
+            }
+        };
+    }
+
+    public static LargoFunction fromVarArgConsumer(BiConsumer<LargoValue, LargoValue[]> function) {
+        return new LargoFunction() {
+            @Override
+            public LargoValue call(LargoValue context, LargoValue[] args) {
+                function.accept(context, args);
+                return LargoUndefined.UNDEFINED;
+            }
+        };
     }
 
     public LargoType getType() {
@@ -17,18 +69,11 @@ public abstract class LargoFunction extends LargoValue {
     }
 
     public LargoFunction bind(LargoValue context) {
-        return new LargoFunction(context) {
+        return new LargoFunction() {
             @Override
             public LargoValue call(LargoValue context, LargoValue... args) {
                 return LargoFunction.this.call(context, args);
             }
         };
     }
-
-    @Override
-    public final LargoValue call(LargoValue... args) {
-        return call(context, args);
-    }
-
-    protected abstract LargoValue call(LargoValue context, LargoValue... args);
 }

@@ -31,8 +31,8 @@ public class Parser {
         return statementList();
     }
 
-    private Node expressionList() throws LexerException, ParserException {
-        if (token == TK_CLOSE_PAR) {
+    private Node expressionList(Token closeToken) throws LexerException, ParserException {
+        if (token == closeToken) {
             return new Node(ND_EMPTY);
         }
 
@@ -44,7 +44,7 @@ public class Parser {
         for (; ; ) {
             Node expr = expression();
             curr.setChild(0, expr);
-            if (token == TK_CLOSE_PAR) {
+            if (token == closeToken) {
                 if (single) {
                     return expr;
                 } else {
@@ -73,7 +73,19 @@ public class Parser {
         switch (token) {
             case TK_OPEN_PAR:
                 lexerNext();
-                node = expressionList();
+                node = expressionList(TK_CLOSE_PAR);
+                break;
+            case TK_OPEN_BR:
+                lexerNext();
+                node = new Node(ND_ARRAY);
+                node.setChild(0, expressionList(TK_CLOSE_BR));
+                break;
+            case TK_OPEN_CS:
+                lexerNext();
+                node = new Node(ND_OBJECT);
+                if(token != TK_CLOSE_CS) {
+                    throw expectedTokenException(l, token, TK_CLOSE_CS);
+                }
                 break;
             case TK_NUMBER:
                 node = new Node(ND_NUMBER);
@@ -156,22 +168,43 @@ public class Parser {
                 Node rightExpr = subStatement();
 
                 leftExpr = new Node(ND_FUNC_DEF, bop, leftExpr, rightExpr);
+            } else if (bop == OP_INDEX_SEL) {
+                lexerNext();
+                Node indexExpr = expression();
+
+                if (token != TK_CLOSE_BR) throw expectedTokenException(l, token, TK_CLOSE_BR);
+                lexerNext();
+
+                OperatorType nbop = getBOp(token);
+                if(nbop == OP_ASSIGN) {
+                    lexerNext();
+                    Node rightExpr = expression();
+                    leftExpr = new Node(ND_INDEX_SET, bop, leftExpr, indexExpr, rightExpr);
+                } else {
+                    leftExpr = new Node(ND_INDEX_SEL, bop, leftExpr, indexExpr);
+                }
             } else if (bop == OP_FIELD_SEL) {
                 lexerNext();
 
                 if (token != TK_ID) throw expectedTokenException(l, token, TK_ID);
 
-                Node rightExpr = new Node(ND_ID_LOCAL);
-                rightExpr.setString(l.sval);
-                setNodeLine(rightExpr, l);
-
+                Node fieldExpr = new Node(ND_ID_LOCAL);
+                fieldExpr.setString(l.sval);
+                setNodeLine(fieldExpr, l);
                 lexerNext();
 
-                leftExpr = new Node(ND_FIELD_SEL, bop, leftExpr, rightExpr);
+                OperatorType nbop = getBOp(token);
+                if(nbop == OP_ASSIGN) {
+                    lexerNext();
+                    Node rightExpr = expression();
+                    leftExpr = new Node(ND_FIELD_SET, bop, leftExpr, fieldExpr, rightExpr);
+                } else {
+                    leftExpr = new Node(ND_FIELD_SEL, bop, leftExpr, fieldExpr);
+                }
             } else if (bop == OP_CALL) {
                 lexerNext();
 
-                Node rightExpr = expressionList();
+                Node rightExpr = expressionList(TK_CLOSE_PAR);
 
                 lexerNext();
 

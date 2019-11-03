@@ -1,24 +1,17 @@
 package com.bunjlabs.largo.types;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class LargoObject extends LargoValue {
-    public static final LargoObject EMPTY = new LargoObject(Collections.EMPTY_MAP);
-
     private final Map<LargoValue, LargoValue> map;
 
-    public LargoObject() {
+    LargoObject() {
         this.map = new HashMap<>();
     }
 
-    public LargoObject(Map<LargoValue, LargoValue> map) {
+    protected LargoObject(Map<LargoValue, LargoValue> map) {
         this.map = map;
-    }
-
-    public static LargoObject create() {
-        return new LargoObject(new HashMap<>());
     }
 
     @Override
@@ -27,9 +20,14 @@ public class LargoObject extends LargoValue {
     }
 
     @Override
+    public LargoPrototype getPrototype() {
+        return LargoPrototypes.OBJECT;
+    }
+
+    @Override
     public LargoValue get(LargoValue key) {
         LargoValue value = map.get(key);
-        return value != null ? value : LargoUndefined.UNDEFINED;
+        return value != null ? value : super.get(key);
     }
 
     @Override

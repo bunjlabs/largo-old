@@ -1,7 +1,5 @@
 package com.bunjlabs.largo.types;
 
-import com.bunjlabs.largo.types.prototype.LargoPrototype;
-
 public abstract class LargoValue {
 
     abstract public LargoType getType();
@@ -10,12 +8,12 @@ public abstract class LargoValue {
         return getType().getTypeName();
     }
 
-    public LargoPrototype getPrototype() {
-        return LargoPrototype.EMPTY;
+    public LargoObject getPrototype() {
+        return LargoPrototypes.VALUE;
     }
 
     public String asJString() {
-        return "[" + getTypeName() + "]";
+        return "[[" + getTypeName() + "]]";
     }
 
     public double asJDouble() {
@@ -30,6 +28,10 @@ public abstract class LargoValue {
         return false;
     }
 
+    public Object asJObject() {
+        return null;
+    }
+
     public LargoString asString() {
         return LargoString.from(asJString());
     }
@@ -42,15 +44,19 @@ public abstract class LargoValue {
         return LargoBoolean.FALSE;
     }
 
-    public LargoValue call(LargoValue... args) {
+    public LargoValue call(LargoValue context, LargoValue... args) {
         return LargoUndefined.UNDEFINED;
     }
 
     public LargoValue get(LargoValue key) {
-        return getPrototype().get(this, key);
+        return getPrototype().get(key);
     }
 
     public void set(LargoValue key, LargoValue value) {
+
+    }
+
+    public void push(LargoValue value) {
 
     }
 
@@ -78,19 +84,35 @@ public abstract class LargoValue {
         return rv.addTo(asJString());
     }
 
-    public LargoValue addTo(String lv) {
+    public LargoValue add(String rv) {
+        return add(LargoString.from(rv));
+    }
+
+    public LargoValue add(boolean rv) {
+        return add(LargoBoolean.from(rv));
+    }
+
+    public LargoValue add(double rv) {
+        return add(LargoNumber.from(rv));
+    }
+
+    public LargoValue add(int rv) {
+        return add(LargoNumber.from(rv));
+    }
+
+    LargoValue addTo(String lv) {
         return LargoString.from(lv + asJString());
     }
 
-    public LargoValue addTo(boolean lv) {
+    LargoValue addTo(boolean lv) {
         return LargoBoolean.FALSE;
     }
 
-    public LargoValue addTo(double lv) {
+    LargoValue addTo(double lv) {
         return LargoDouble.NaN;
     }
 
-    public LargoValue addTo(int lv) {
+    LargoValue addTo(int lv) {
         return LargoDouble.NaN;
     }
 
@@ -98,19 +120,35 @@ public abstract class LargoValue {
         return LargoDouble.NaN;
     }
 
-    public LargoValue subFrom(String lv) {
+    public LargoValue sub(String rv) {
+        return sub(LargoString.from(rv));
+    }
+
+    public LargoValue sub(boolean rv) {
+        return sub(LargoBoolean.from(rv));
+    }
+
+    public LargoValue sub(double rv) {
+        return sub(LargoNumber.from(rv));
+    }
+
+    public LargoValue sub(int rv) {
+        return sub(LargoNumber.from(rv));
+    }
+
+    LargoValue subFrom(String lv) {
         return LargoDouble.NaN;
     }
 
-    public LargoValue subFrom(boolean lv) {
+    LargoValue subFrom(boolean lv) {
         return LargoBoolean.FALSE;
     }
 
-    public LargoValue subFrom(double lv) {
+    LargoValue subFrom(double lv) {
         return LargoDouble.NaN;
     }
 
-    public LargoValue subFrom(int lv) {
+    LargoValue subFrom(int lv) {
         return LargoDouble.NaN;
     }
 
@@ -118,19 +156,35 @@ public abstract class LargoValue {
         return LargoDouble.NaN;
     }
 
-    public LargoValue mulWith(String lv) {
+    public LargoValue mul(String rv) {
+        return mul(LargoString.from(rv));
+    }
+
+    public LargoValue mul(boolean rv) {
+        return mul(LargoBoolean.from(rv));
+    }
+
+    public LargoValue mul(double rv) {
+        return mul(LargoNumber.from(rv));
+    }
+
+    public LargoValue mul(int rv) {
+        return mul(LargoNumber.from(rv));
+    }
+
+    LargoValue mulWith(String lv) {
         return LargoDouble.NaN;
     }
 
-    public LargoValue mulWith(boolean lv) {
+    LargoValue mulWith(boolean lv) {
         return LargoDouble.NaN;
     }
 
-    public LargoValue mulWith(double lv) {
+    LargoValue mulWith(double lv) {
         return LargoDouble.NaN;
     }
 
-    public LargoValue mulWith(int lv) {
+    LargoValue mulWith(int lv) {
         return LargoDouble.NaN;
     }
 
@@ -138,19 +192,35 @@ public abstract class LargoValue {
         return LargoDouble.NaN;
     }
 
-    public LargoValue divInto(String lv) {
+    public LargoValue div(String rv) {
+        return div(LargoString.from(rv));
+    }
+
+    public LargoValue div(boolean rv) {
+        return div(LargoBoolean.from(rv));
+    }
+
+    public LargoValue div(double rv) {
+        return div(LargoNumber.from(rv));
+    }
+
+    public LargoValue div(int rv) {
+        return div(LargoNumber.from(rv));
+    }
+
+    LargoValue divInto(String lv) {
         return LargoDouble.NaN;
     }
 
-    public LargoValue divInto(boolean lv) {
+    LargoValue divInto(boolean lv) {
         return LargoDouble.NaN;
     }
 
-    public LargoValue divInto(double lv) {
+    LargoValue divInto(double lv) {
         return LargoDouble.NaN;
     }
 
-    public LargoValue divInto(int lv) {
+    LargoValue divInto(int lv) {
         return LargoDouble.NaN;
     }
 
@@ -158,19 +228,35 @@ public abstract class LargoValue {
         return LargoDouble.NaN;
     }
 
-    public LargoValue modFrom(String lv) {
+    public LargoValue mod(String rv) {
+        return mod(LargoString.from(rv));
+    }
+
+    public LargoValue mod(boolean rv) {
+        return mod(LargoBoolean.from(rv));
+    }
+
+    public LargoValue mod(double rv) {
+        return mod(LargoNumber.from(rv));
+    }
+
+    public LargoValue mod(int rv) {
+        return mod(LargoNumber.from(rv));
+    }
+
+    LargoValue modFrom(String lv) {
         return LargoDouble.NaN;
     }
 
-    public LargoValue modFrom(boolean lv) {
+    LargoValue modFrom(boolean lv) {
         return LargoDouble.NaN;
     }
 
-    public LargoValue modFrom(double lv) {
+    LargoValue modFrom(double lv) {
         return LargoDouble.NaN;
     }
 
-    public LargoValue modFrom(int lv) {
+    LargoValue modFrom(int lv) {
         return LargoDouble.NaN;
     }
 
@@ -287,5 +373,17 @@ public abstract class LargoValue {
     @Override
     public int hashCode() {
         return asJString().hashCode();
+    }
+
+    private static class Prototype extends LargoPrototype {
+
+        Prototype() {
+            setProperty("toString", LargoFunction.fromFunction(this::convertString));
+        }
+
+        private LargoValue convertString(LargoValue value) {
+            return value.asString();
+        }
+
     }
 }

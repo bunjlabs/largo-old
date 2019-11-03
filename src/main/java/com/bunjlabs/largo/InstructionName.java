@@ -1,31 +1,42 @@
-package com.bunjlabs.largo.runtime;
+package com.bunjlabs.largo;
 
-public enum OpCodeType {
+public enum InstructionName {
+    L_NOP,
+    L_ERR,
+
     // Variable
-    L_GETLOCAL,
-    L_SETLOCAL,
-    L_GETOUTER,
-    L_CLOSURE,
+    L_LOAD,
+    L_STORE,
+    L_LOADO,
+    L_STOREO,
 
-    // Object
-    L_GETNAME,
+    // Arrays
+    L_GETINDEX,
+    L_PUTINDEX,
+    L_PUSHA,
+
+    // Objects
+    L_GETFIELD,
+    L_SETFIELD,
 
     // Export and constants
     L_IMPORT,
-    L_CONST,
 
     // Stack operators
     L_PUSH,
     L_POP,
 
-    // Jumpers
+    // Flow control
     L_JMP,
     L_JMPF,
 
     // Constants
-    L_BOOLEAN,
-    L_UNDEFINED,
-    L_NULL,
+    L_LOADC,
+    L_LOADA,
+    L_LOADM,
+    L_LOADB,
+    L_LOADU,
+    L_LOADN,
 
     // Arithmetical
     L_ADD,
@@ -55,11 +66,9 @@ public enum OpCodeType {
     L_OR,
     L_NOT,
 
-    // Misc
-    L_NOP,
-    L_ERR,
-
-    // Call
+    // Closure
+    L_LOADF,
     L_CALL,
     L_RET
+
 }

@@ -1,33 +1,27 @@
-package com.bunjlabs.largo.types.prototype;
-
-import com.bunjlabs.largo.lib.functions.LibFunctions;
-import com.bunjlabs.largo.types.LargoBoolean;
-import com.bunjlabs.largo.types.LargoInteger;
-import com.bunjlabs.largo.types.LargoString;
-import com.bunjlabs.largo.types.LargoValue;
+package com.bunjlabs.largo.types;
 
 import java.util.regex.Pattern;
 
-public class LargoStringPrototype extends LargoPrototype {
+class LargoStringPrototype extends LargoPrototype {
 
-    public LargoStringPrototype() {
-        set(LargoString.from("charAt"), LibFunctions.biFunction(this::charAt));
-        set(LargoString.from("codePointAt"), LibFunctions.biFunction(this::codePointAt));
-        set(LargoString.from("concat"), LibFunctions.biFunction(this::concat));
-        set(LargoString.from("contains"), LibFunctions.biFunction(this::contains));
-        set(LargoString.from("endWith"), LibFunctions.biFunction(this::endWith));
-        set(LargoString.from("hashCode"), LibFunctions.function(this::hashCode));
-        set(LargoString.from("indexOf"), LibFunctions.varArgFunction(this::indexOf));
-        set(LargoString.from("isEmpty"), LibFunctions.function(this::isEmpty));
-        set(LargoString.from("lastIndexOf"), LibFunctions.varArgFunction(this::lastIndexOf));
-        set(LargoString.from("length"), LibFunctions.function(this::length));
-        set(LargoString.from("replace"), LibFunctions.varArgFunction(this::replace));
-        set(LargoString.from("replaceFirst"), LibFunctions.varArgFunction(this::replaceFirst));
-        set(LargoString.from("startWith"), LibFunctions.varArgFunction(this::startWith));
-        set(LargoString.from("substring"), LibFunctions.varArgFunction(this::substring));
-        set(LargoString.from("toLowerCase"), LibFunctions.function(this::toLowerCase));
-        set(LargoString.from("toUpperCase"), LibFunctions.function(this::toUpperCase));
-        set(LargoString.from("trim"), LibFunctions.function(this::trim));
+    LargoStringPrototype() {
+        set(LargoString.from("charAt"), LargoFunction.fromBiFunction(this::charAt));
+        set(LargoString.from("codePointAt"), LargoFunction.fromBiFunction(this::codePointAt));
+        set(LargoString.from("concat"), LargoFunction.fromBiFunction(this::concat));
+        set(LargoString.from("contains"), LargoFunction.fromBiFunction(this::contains));
+        set(LargoString.from("endWith"), LargoFunction.fromBiFunction(this::endWith));
+        set(LargoString.from("hashCode"), LargoFunction.fromFunction(this::hashCode));
+        set(LargoString.from("indexOf"), LargoFunction.fromVarArgFunction(this::indexOf));
+        set(LargoString.from("isEmpty"), LargoFunction.fromFunction(this::isEmpty));
+        set(LargoString.from("lastIndexOf"), LargoFunction.fromVarArgFunction(this::lastIndexOf));
+        set(LargoString.from("length"), LargoFunction.fromFunction(this::length));
+        set(LargoString.from("replace"), LargoFunction.fromVarArgFunction(this::replace));
+        set(LargoString.from("replaceFirst"), LargoFunction.fromVarArgFunction(this::replaceFirst));
+        set(LargoString.from("startWith"), LargoFunction.fromVarArgFunction(this::startWith));
+        set(LargoString.from("substring"), LargoFunction.fromVarArgFunction(this::substring));
+        set(LargoString.from("toLowerCase"), LargoFunction.fromFunction(this::toLowerCase));
+        set(LargoString.from("toUpperCase"), LargoFunction.fromFunction(this::toUpperCase));
+        set(LargoString.from("trim"), LargoFunction.fromFunction(this::trim));
     }
 
     private LargoValue charAt(LargoValue value, LargoValue index) {

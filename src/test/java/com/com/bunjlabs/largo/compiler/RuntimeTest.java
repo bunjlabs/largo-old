@@ -1,39 +1,28 @@
 package com.com.bunjlabs.largo.compiler;
 
-import com.bunjlabs.largo.Blueprint;
-import com.bunjlabs.largo.compiler.codegen.CodeGenerator;
-import com.bunjlabs.largo.compiler.parser.Parser;
-import com.bunjlabs.largo.compiler.parser.nodes.Node;
-import com.bunjlabs.largo.compiler.semantic.SemanticAnalyzer;
-import com.bunjlabs.largo.compiler.semantic.SemanticInfo;
+import com.bunjlabs.largo.*;
 import com.bunjlabs.largo.lib.MathLib;
-import com.bunjlabs.largo.lib.functions.LibFunctions;
-import com.bunjlabs.largo.runtime.*;
+import com.bunjlabs.largo.types.LargoFunction;
 import org.junit.jupiter.api.Test;
-
-import java.io.StringReader;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class RuntimeTest {
     private static DefaultLargoRuntimeConstraints constraints = new DefaultLargoRuntimeConstraints();
-    private static LargoRuntime runtime = new DefaultLargoRuntime();
 
     String run(String source) throws Exception {
-        Parser parser = new Parser(new StringReader("import r;import m;" + source));
-        Node root = parser.parse();
-        SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer(root);
-        SemanticInfo semanticInfo = semanticAnalyzer.analyze();
-        CodeGenerator codeGenerator = new CodeGenerator(semanticInfo);
-        Blueprint blueprint = codeGenerator.generate();
-
-        LargoEnvironment environment = new DefaultLargoEnvironment(constraints);
-
+        DefaultLargoEnvironment environment = new DefaultLargoEnvironment(constraints);
         final String[] result = new String[1];
-        environment.export("r", LibFunctions.biConsumer((ctx, value) -> result[0] = value.asJString()));
-        environment.export("m", MathLib.MATH);
+        environment.export("r", LargoFunction.fromBiConsumer((ctx, value) -> {
+            result[0] = value.asJString();
+        }));
+        environment.export("m", MathLib.LIB);
 
-        runtime.execute(environment, blueprint);
+        LargoRuntime runtime = new DefaultLargoRuntime(environment);
+        LargoFunction script = runtime.load("import r;import m;" + source);
+
+
+        script.call(environment.getContext());
 
         return result[0];
     }
@@ -137,18 +126,19 @@ class RuntimeTest {
 
     @Test
     void objectCases() throws Exception {
-        assertEquals("[function]", run("r(m.sqrt);"));
+        assertEquals("[[function]]", run("r(m.sqrt);"));
         assertEquals("undefined", run("r(m.asd);"));
         assertEquals("undefined", run("r(m.asd.sqrt);"));
         assertEquals("undefined", run("r(m.asd.asd);"));
 
         assertEquals("undefined", run("r('asd'.asd);"));
-        assertEquals("[function]", run("r('asd'.trim);"));
+        assertEquals("[[function]]", run("r('asd'.trim);"));
 
 
         assertEquals("true", run("r('asd'.asd == undefined);"));
     }
 
+    @Test
     void functionCases() throws Exception {
         assertEquals("asd", run("r('asd'.trim());"));
         assertEquals("undefined", run("r('asd'.trim()());"));
