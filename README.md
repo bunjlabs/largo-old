@@ -69,3 +69,31 @@ print(m.floor(age) + " " + m.ceil(age));
 let angle = m.toRadians(60);
 print(m.sin(angle) + " " + m.cos(angle));
 ```
+
+### Closure
+```
+import print;
+
+let add = x -> y -> {
+  let z = x + y;
+  print(x + '+' + y + '=' + z);
+  return z;
+};
+
+let res = add(3)(6); // will return 9 and print 3+6=9
+
+print(res);
+```
+
+### Arrays and objects
+```
+import print;
+
+let array = [5, "str", true];
+array[0] = 1;
+print(array); // print [1, "str", true]
+
+let object = {};
+object.field1 = "str";
+print(object); // print [[object]]
+```
