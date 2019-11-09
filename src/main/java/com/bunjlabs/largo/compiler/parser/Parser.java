@@ -112,7 +112,7 @@ public class Parser {
                 setNodeLine(node, ln, cn);
                 break;
             case TK_ID:
-                node = new Node(ND_ID_LOCAL);
+                node = new Node(ND_ID);
                 node.setString(l.sval);
 
 
@@ -188,7 +188,7 @@ public class Parser {
 
                 if (token != TK_ID) throw expectedTokenException(l, token, TK_ID);
 
-                Node fieldExpr = new Node(ND_ID_LOCAL);
+                Node fieldExpr = new Node(ND_ID);
                 fieldExpr.setString(l.sval);
                 setNodeLine(fieldExpr, l);
                 lexerNext();
@@ -428,7 +428,7 @@ public class Parser {
         Node node = new Node(ND_IMPORT);
         node.setString(l.sval);
 
-        Node id = new Node(ND_ID_LOCAL);
+        Node id = new Node(ND_ID);
         id.setString(l.sval);
         node.setChild(0, id);
 
@@ -444,6 +444,21 @@ public class Parser {
 
             lexerNext();
         }
+
+        return node;
+    }
+
+
+    private Node exportStatement() throws LexerException, ParserException {
+        lexerNext();
+
+        if (token != TK_ID) {
+            throw expectedTokenException(l, token, TK_ID);
+        }
+
+        Node node = new Node(ND_EXPORT);
+
+        lexerNext();
 
         return node;
     }
@@ -486,6 +501,13 @@ public class Parser {
                 break;
             case TK_IMPORT:
                 node = importStatement();
+                if (token != TK_END_STMT) {
+                    throw expectedTokenException(l, token, TK_END_STMT);
+                }
+                lexerNext();
+                break;
+            case TK_EXPORT:
+                node = exportStatement();
                 if (token != TK_END_STMT) {
                     throw expectedTokenException(l, token, TK_END_STMT);
                 }

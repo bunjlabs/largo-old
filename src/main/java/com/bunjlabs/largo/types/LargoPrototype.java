@@ -4,20 +4,20 @@ import java.util.HashMap;
 
 public abstract class LargoPrototype extends LargoObject {
 
+    private static final LargoPrototype EMPTY = new LargoPrototype() {
+    };
+
+    public static LargoPrototype epmty() {
+        return EMPTY;
+    }
+
     LargoPrototype() {
         super(new HashMap<>());
     }
 
-    public LargoValue get(LargoValue context, LargoValue key) {
-        LargoValue value = get(key);
-
-        if (value.getType() == LargoType.FUNCTION) {
-            LargoFunction func = (LargoFunction) value;
-
-            return func.bind(context);
-        } else {
-            return value;
-        }
+    @Override
+    public LargoValue get(LargoValue key) {
+        return getOwn(key);
     }
 
     void setProperty(String name, LargoValue value) {

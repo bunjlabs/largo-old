@@ -5,6 +5,7 @@ public class LargoInteger extends LargoNumber {
     public static final LargoInteger MIN_VALUE = new LargoInteger(Integer.MIN_VALUE);
     public static final LargoInteger ZERO = new LargoInteger(0);
     public static final LargoInteger ONE = new LargoInteger(1);
+    public static final LargoInteger NEGATIVE_ONE = new LargoInteger(-1);
 
     private static final LargoInteger[] intValues = new LargoInteger[512];
 

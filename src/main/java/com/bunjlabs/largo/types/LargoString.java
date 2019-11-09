@@ -3,29 +3,37 @@ package com.bunjlabs.largo.types;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 public class LargoString extends LargoValue {
-    public static final LargoString EMPTY = new LargoString("");
+    private static final LargoPrototype PROTOTYPE = new Prototype();
+
+    private static final LargoString EMPTY = new LargoString("");
 
     private static final NumberFormat NUMBER_FORMAT = NumberFormat.getInstance(Locale.ROOT);
-    private static final LargoPrototype prototype = new LargoStringPrototype();
     private final String value;
 
-    private LargoString(String value) {
-        this.value = value;
+    public static LargoString empty() {
+        return EMPTY;
     }
 
     public static LargoString from(String s) {
         return new LargoString(s);
     }
 
+    private LargoString(String value) {
+        this.value = value;
+    }
+
+
     @Override
     public LargoType getType() {
         return LargoType.STRING;
     }
 
+    @Override
     public LargoPrototype getPrototype() {
-        return LargoPrototypes.STRING;
+        return PROTOTYPE;
     }
 
     @Override
@@ -342,5 +350,144 @@ public class LargoString extends LargoValue {
         return LargoBoolean.FALSE;
     }
 
+    private static class Prototype extends LargoPrototype {
 
+        Prototype() {
+            setProperty("charAt", LargoFunction.fromBiFunction(this::charAt));
+            setProperty("codePointAt", LargoFunction.fromBiFunction(this::codePointAt));
+            setProperty("concat", LargoFunction.fromBiFunction(this::concat));
+            setProperty("contains", LargoFunction.fromBiFunction(this::contains));
+            setProperty("endWith", LargoFunction.fromBiFunction(this::endWith));
+            setProperty("hashCode", LargoFunction.fromFunction(this::hashCode));
+            setProperty("indexOf", LargoFunction.fromVarArgFunction(this::indexOf));
+            setProperty("isEmpty", LargoFunction.fromFunction(this::isEmpty));
+            setProperty("lastIndexOf", LargoFunction.fromVarArgFunction(this::lastIndexOf));
+            setProperty("length", LargoFunction.fromFunction(this::length));
+            setProperty("replace", LargoFunction.fromVarArgFunction(this::replace));
+            setProperty("replaceFirst", LargoFunction.fromVarArgFunction(this::replaceFirst));
+            setProperty("startWith", LargoFunction.fromVarArgFunction(this::startWith));
+            setProperty("substring", LargoFunction.fromVarArgFunction(this::substring));
+            setProperty("toLowerCase", LargoFunction.fromFunction(this::toLowerCase));
+            setProperty("toUpperCase", LargoFunction.fromFunction(this::toUpperCase));
+            setProperty("trim", LargoFunction.fromFunction(this::trim));
+            setProperty("valueOf", LargoFunction.fromBiFunction(this::valueOf));
+            setProperty("toString", LargoFunction.fromFunction(this::convertString));
+        }
+
+        private LargoValue charAt(LargoValue thisRef, LargoValue index) {
+            return LargoString.from(thisRef.asJString().charAt(index.asJInteger()) + "");
+        }
+
+        private LargoValue codePointAt(LargoValue thisRef, LargoValue index) {
+            return LargoInteger.from(thisRef.asJString().codePointAt(index.asJInteger()));
+        }
+
+        private LargoValue concat(LargoValue thisRef, LargoValue str) {
+            return LargoString.from(thisRef.asJString().concat(str.asJString()));
+        }
+
+        private LargoValue contains(LargoValue thisRef, LargoValue str) {
+            return LargoBoolean.from(thisRef.asJString().contains(str.asJString()));
+        }
+
+        private LargoValue endWith(LargoValue thisRef, LargoValue str) {
+            return LargoBoolean.from(thisRef.asJString().endsWith(str.asJString()));
+        }
+
+        private LargoValue hashCode(LargoValue thisRef) {
+            return LargoInteger.from(thisRef.asJString().hashCode());
+        }
+
+        private LargoValue indexOf(LargoValue thisRef, LargoValue... args) {
+            if (args.length == 0) {
+                return LargoInteger.from(-1);
+            } else if (args.length == 1) {
+                return LargoInteger.from(thisRef.asJString().indexOf(args[0].asJString()));
+            } else {
+                return LargoInteger.from(thisRef.asJString().indexOf(args[0].asJString(), args[1].asJInteger()));
+            }
+        }
+
+        private LargoValue isEmpty(LargoValue thisRef) {
+            return LargoBoolean.from(thisRef.asJString().isEmpty());
+        }
+
+        private LargoValue lastIndexOf(LargoValue thisRef, LargoValue... args) {
+            if (args.length == 0) {
+                return LargoInteger.from(-1);
+            } else if (args.length == 1) {
+                return LargoInteger.from(thisRef.asJString().lastIndexOf(args[0].asJString()));
+            } else {
+                return LargoInteger.from(thisRef.asJString().lastIndexOf(args[0].asJString(), args[1].asJInteger()));
+            }
+        }
+
+        private LargoValue length(LargoValue thisRef) {
+            return LargoInteger.from(thisRef.asJString().length());
+        }
+
+        private LargoValue replace(LargoValue thisRef, LargoValue... args) {
+            if (args.length == 0) {
+                return thisRef;
+            } else if (args.length == 1) {
+                Pattern p = Pattern.compile(args[0].asJString(), Pattern.LITERAL);
+                return LargoString.from(p.matcher(args[0].asJString()).replaceAll(""));
+            } else {
+                Pattern p = Pattern.compile(args[0].asJString(), Pattern.LITERAL);
+                return LargoString.from(p.matcher(args[0].asJString()).replaceAll(args[1].asJString()));
+            }
+        }
+
+        private LargoValue replaceFirst(LargoValue thisRef, LargoValue... args) {
+            if (args.length == 0) {
+                return thisRef;
+            } else if (args.length == 1) {
+                Pattern p = Pattern.compile(args[0].asJString(), Pattern.LITERAL);
+                return LargoString.from(p.matcher(args[0].asJString()).replaceFirst(""));
+            } else {
+                Pattern p = Pattern.compile(args[0].asJString(), Pattern.LITERAL);
+                return LargoString.from(p.matcher(args[0].asJString()).replaceFirst(args[1].asJString()));
+            }
+        }
+
+        private LargoValue startWith(LargoValue thisRef, LargoValue... args) {
+            if (args.length == 0) {
+                return LargoBoolean.TRUE;
+            } else if (args.length == 1) {
+                return LargoBoolean.from(thisRef.asJString().startsWith(args[0].asJString()));
+            } else {
+                return LargoBoolean.from(thisRef.asJString().startsWith(args[0].asJString(), args[1].asJInteger()));
+            }
+        }
+
+        private LargoValue substring(LargoValue thisRef, LargoValue... args) {
+            if (args.length == 0) {
+                return thisRef;
+            } else if (args.length == 1) {
+                return LargoString.from(thisRef.asJString().substring(args[0].asJInteger()));
+            } else {
+                return LargoString.from(thisRef.asJString().substring(args[0].asJInteger(), args[1].asJInteger()));
+            }
+        }
+
+        private LargoValue toLowerCase(LargoValue thisRef) {
+            return LargoString.from(thisRef.asJString().toLowerCase());
+        }
+
+        private LargoValue toUpperCase(LargoValue thisRef) {
+            return LargoString.from(thisRef.asJString().toUpperCase());
+        }
+
+        private LargoValue trim(LargoValue thisRef) {
+            return LargoString.from(thisRef.asJString().trim());
+        }
+
+        private LargoValue valueOf(LargoValue thisRef, LargoValue value) {
+            return value.asString();
+        }
+
+        private LargoValue convertString(LargoValue thisRef) {
+            return thisRef.asString();
+        }
+    }
 }

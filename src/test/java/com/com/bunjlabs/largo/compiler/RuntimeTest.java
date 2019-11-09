@@ -1,28 +1,24 @@
 package com.com.bunjlabs.largo.compiler;
 
 import com.bunjlabs.largo.*;
-import com.bunjlabs.largo.lib.MathLib;
+import com.bunjlabs.largo.LargoMathModule;
 import com.bunjlabs.largo.types.LargoFunction;
+import com.bunjlabs.largo.types.LargoString;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class RuntimeTest {
-    private static DefaultLargoRuntimeConstraints constraints = new DefaultLargoRuntimeConstraints();
-
     String run(String source) throws Exception {
-        DefaultLargoEnvironment environment = new DefaultLargoEnvironment(constraints);
+        LargoRuntime runtime = LargoRuntime.createDefaultRuntime();
+
+        LargoModule testModule = new LargoModule();
         final String[] result = new String[1];
-        environment.export("r", LargoFunction.fromBiConsumer((ctx, value) -> {
-            result[0] = value.asJString();
-        }));
-        environment.export("m", MathLib.LIB);
+        testModule.export(LargoString.from("r"), LargoFunction.fromBiConsumer((ctx, value) ->  result[0] = value.asJString()));
 
-        LargoRuntime runtime = new DefaultLargoRuntime(environment);
-        LargoFunction script = runtime.load("import r;import m;" + source);
-
-
-        script.call(environment.getContext());
+        runtime.getEnvironment().addModule("t", testModule);
+        runtime.getEnvironment().addModule("math", new LargoMathModule());
+        runtime.load("test","import t;import math;let r=t.r;let m=math;" + source);
 
         return result[0];
     }

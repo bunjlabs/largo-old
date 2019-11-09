@@ -7,8 +7,6 @@ public enum InstructionName {
     // Variable
     L_LOAD,
     L_STORE,
-    L_LOADO,
-    L_STOREO,
 
     // Arrays
     L_GETINDEX,
@@ -19,8 +17,9 @@ public enum InstructionName {
     L_GETFIELD,
     L_SETFIELD,
 
-    // Export and constants
+    // Modules
     L_IMPORT,
+    L_EXPORT,
 
     // Stack operators
     L_PUSH,

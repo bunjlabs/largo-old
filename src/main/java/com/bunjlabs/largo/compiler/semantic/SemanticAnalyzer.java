@@ -1,7 +1,6 @@
 package com.bunjlabs.largo.compiler.semantic;
 
 import com.bunjlabs.largo.compiler.SemanticException;
-import com.bunjlabs.largo.compiler.parser.Parser;
 import com.bunjlabs.largo.compiler.parser.nodes.Node;
 import com.bunjlabs.largo.compiler.parser.nodes.NodeType;
 import com.bunjlabs.largo.compiler.parser.nodes.OperatorType;
@@ -24,13 +23,13 @@ public class SemanticAnalyzer {
     private static final NodeType[] EXPRESSION_TYPES = new NodeType[]{
             ND_UNOP_EXPR, ND_BINOP_EXPR, ND_FUNC_DEF, ND_CALL,
             ND_INDEX_SEL, ND_INDEX_SET, ND_FIELD_SEL, ND_FIELD_SET,
-            ND_ID_LOCAL, ND_ID_OUTER, ND_ARRAY, ND_OBJECT,
+            ND_ID, ND_ARRAY, ND_OBJECT,
             ND_NUMBER, ND_BOOLEAN, ND_STRING, ND_NULL, ND_UNDEFINED};
 
     private static final NodeType[] STATEMENT_TYPES = new NodeType[]{
-            ND_STMT_LIST, ND_VARINIT_STMT, ND_IMPORT, ND_IF_STMT,
-            ND_IFELSE_STMT, ND_WHILE_STMT, ND_FOR_STMT, ND_EXPR_STMT,
-            ND_BREAK, ND_CONTINUE, ND_RETURN};
+            ND_STMT_LIST, ND_VARINIT_STMT, ND_IMPORT, ND_EXPORT,
+            ND_IF_STMT, ND_IFELSE_STMT, ND_WHILE_STMT, ND_FOR_STMT,
+            ND_EXPR_STMT, ND_BREAK, ND_CONTINUE, ND_RETURN};
 
     private static final OperatorType[] ASSIGN_OPERATOR_TYPES = new OperatorType[]{
             OP_ASSIGN, OP_PLUSEQ, OP_MINUSEQ, OP_MULTEQ,
@@ -43,42 +42,35 @@ public class SemanticAnalyzer {
             OP_LESSEQ};
 
     private final ConstTable constTable;
-    private final IdTable localIdTable;
-    private final IdTable outerIdTable;
+    private final IdTable idTable;
     private final BlueprintTable blueprintTable;
     private final int argumentsCount;
+    private final int localVariablesIndex;
     private final Node root;
     private int nestLevel = 0;
 
     public SemanticAnalyzer(Node root) {
         this.root = root;
         this.constTable = new ConstTable();
-        this.localIdTable = new IdTable();
-        this.outerIdTable = new IdTable();
+        this.idTable = new IdTable();
         this.blueprintTable = new BlueprintTable();
         this.argumentsCount = 0;
+        this.localVariablesIndex = 0;
     }
 
-    public SemanticAnalyzer(Node root, List<String> funcArguments, IdTable outerIdTable) {
+    private SemanticAnalyzer(Node root, IdTable idTable, int argumentsCount) {
         this.root = root;
         this.constTable = new ConstTable();
-        this.localIdTable = new IdTable(funcArguments);
-        this.outerIdTable = outerIdTable;
+        this.idTable = idTable;
         this.blueprintTable = new BlueprintTable();
-        this.argumentsCount = funcArguments.size();
+        this.argumentsCount = argumentsCount;
+        this.localVariablesIndex = idTable.getVariableCount();
     }
 
     private void analyzeId(Node node) throws SemanticException {
-        int localId = localIdTable.getId(node.getString());
-        if (localId >= 0) {
-            node.setArgument(localId);
-            return;
-        }
-
-        int outerId = outerIdTable.getId(node.getString());
-        if (outerId >= 0) {
-            node.setType(ND_ID_OUTER);
-            node.setArgument(outerId);
+        IdTable.ResolvedId resolvedId = idTable.getId(node.getString());
+        if (resolvedId != null) {
+            node.setArgument(resolvedId.id);
             return;
         }
 
@@ -136,7 +128,7 @@ public class SemanticAnalyzer {
         Node expr = node.getChild(0);
 
         if (checkNodeOperator(node, OP_DPREPLUS, OP_DPREMINUS, OP_DPOSTPLUS, OP_DPOSTMINUS)) {
-            if (!checkNodeType(expr, ND_ID_LOCAL)) {
+            if (!checkNodeType(expr, ND_ID)) {
                 throw semanticException(node, "pre increment operator must have local identificator at right side");
             }
 
@@ -157,7 +149,7 @@ public class SemanticAnalyzer {
         Node rightExpr = node.getChild(1);
 
         if (checkNodeOperator(node, ASSIGN_OPERATOR_TYPES)) {
-            if (!checkNodeType(leftExpr, ND_ID_LOCAL)) {
+            if (!checkNodeType(leftExpr, ND_ID)) {
                 throw semanticException(node, "assign operator must have local identificator at left side");
             }
 
@@ -185,7 +177,7 @@ public class SemanticAnalyzer {
     }
 
     private void analyzeFunctionDefinitionIds(Node node) throws SemanticException {
-        if (checkNodeType(node, ND_ID_LOCAL, ND_EMPTY)) {
+        if (checkNodeType(node, ND_ID, ND_EMPTY)) {
             return;
         }
 
@@ -197,7 +189,7 @@ public class SemanticAnalyzer {
         while (curr.getType() != ND_EMPTY) {
             Node expr = curr.getChild(0);
 
-            if (!checkNodeType(expr, ND_ID_LOCAL)) {
+            if (!checkNodeType(expr, ND_ID)) {
                 throw semanticException(node, "First child in FuncDefIds must be Id");
             }
 
@@ -213,7 +205,7 @@ public class SemanticAnalyzer {
         Node args = node.getChild(0);
         Node body = node.getChild(1);
 
-        if (!checkNodeType(args, ND_EXPR_LIST, ND_ID_LOCAL, ND_EMPTY)) {
+        if (!checkNodeType(args, ND_EXPR_LIST, ND_ID, ND_EMPTY)) {
             throw semanticException(node, "FunctionDefinition first child must be ExpressionList, Id or Empty");
         }
 
@@ -225,7 +217,7 @@ public class SemanticAnalyzer {
 
         List<String> funcArguments = new ArrayList<>();
 
-        if (args.getType() == ND_ID_LOCAL) {
+        if (args.getType() == ND_ID) {
             funcArguments.add(args.getString());
         } else {
             Node curArg = args;
@@ -235,8 +227,12 @@ public class SemanticAnalyzer {
             }
         }
 
-        SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer(body, funcArguments, localIdTable);
+        SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer(body, idTable, funcArguments.size());
+
+        idTable.push();
+        for (String name : funcArguments) idTable.createId(name);
         SemanticInfo semanticInfo = semanticAnalyzer.analyze();
+        idTable.pop();
 
         node.setArgument(blueprintTable.getId(semanticInfo));
     }
@@ -320,7 +316,7 @@ public class SemanticAnalyzer {
             throw semanticException(node, "FieldSelect first child must be Expression");
         }
 
-        if (!checkNodeType(id, ND_ID_LOCAL)) {
+        if (!checkNodeType(id, ND_ID)) {
             throw semanticException(node, "FieldSelect second child must be Id");
         }
 
@@ -341,7 +337,7 @@ public class SemanticAnalyzer {
             throw semanticException(node, "FieldSet first child must be Expression");
         }
 
-        if (!checkNodeType(id, ND_ID_LOCAL)) {
+        if (!checkNodeType(id, ND_ID)) {
             throw semanticException(node, "FieldSet second child must be Id");
         }
 
@@ -380,7 +376,7 @@ public class SemanticAnalyzer {
             case ND_FIELD_SET:
                 analyzeFieldSet(node);
                 return;
-            case ND_ID_LOCAL:
+            case ND_ID:
                 analyzeId(node);
                 return;
             case ND_ARRAY:
@@ -533,13 +529,13 @@ public class SemanticAnalyzer {
     }
 
     private void analyzeVarInit(Node node) throws SemanticException {
-        int id = localIdTable.createId(node.getString());
+        IdTable.ResolvedId resolvedId = idTable.createId(node.getString());
 
-        if (id < 0) {
+        if (resolvedId == null) {
             throw new SemanticException(node, "Variable already defined: " + node.getString());
         }
 
-        node.setArgument(id);
+        node.setArgument(resolvedId.id);
 
         if (!checkNodeChildsForNull(node, 2)) {
             throw semanticException(node, "VariableInit statement must have two childs as Expression and VarInit");
@@ -581,17 +577,32 @@ public class SemanticAnalyzer {
 
         Node id = node.getChild(0);
 
-        if (!checkNodeType(id, ND_ID_LOCAL)) {
+        if (!checkNodeType(id, ND_ID)) {
             throw semanticException(node, "Import child must be an Id");
         }
 
         node.setArgument(constTable.getId(LargoString.from(node.getString())));
-        id.setArgument(localIdTable.createId(id.getString()));
+        id.setArgument(idTable.createId(id.getString()).id);
+    }
+
+    private void analyzeExport(Node node) throws SemanticException {
+        if (!checkNodeChildsForNull(node, 1)) {
+            throw semanticException(node, "Import statement must have one child for Id");
+        }
+
+        Node id = node.getChild(0);
+
+        if (!checkNodeType(id, ND_ID)) {
+            throw semanticException(node, "Import child must be an Id");
+        }
+
+        node.setArgument(constTable.getId(LargoString.from(node.getString())));
+        id.setArgument(idTable.createId(id.getString()).id);
     }
 
     private void analyzeStatementList(Node node) throws SemanticException {
         nestLevel++;
-        localIdTable.push();
+        idTable.push();
         Node curr = node;
         while (!checkNodeType(curr, ND_EMPTY)) {
             Node leftStmt = curr.getChild(0);
@@ -609,7 +620,7 @@ public class SemanticAnalyzer {
             curr = rightStmt;
         }
         nestLevel--;
-        localIdTable.pop();
+        idTable.pop();
     }
 
     private void analyzeStatement(Node node) throws SemanticException {
@@ -623,6 +634,9 @@ public class SemanticAnalyzer {
                 return;
             case ND_IMPORT:
                 analyzeImport(node);
+                return;
+            case ND_EXPORT:
+                analyzeExport(node);
                 return;
             case ND_VARINIT_STMT:
                 analyzeVarInit(node);
@@ -661,6 +675,6 @@ public class SemanticAnalyzer {
 
         analyzeStatement(root);
 
-        return new SemanticInfo(root, constTable.buildConstPool(), blueprintTable.buildFunctionsTable(), argumentsCount, localIdTable.getVariableCount());
+        return new SemanticInfo(root, constTable.buildConstPool(), blueprintTable.buildFunctionsTable(), argumentsCount, idTable.getVariableCount(), localVariablesIndex);
     }
 }

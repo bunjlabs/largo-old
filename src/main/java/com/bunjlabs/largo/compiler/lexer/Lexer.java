@@ -192,6 +192,8 @@ public class Lexer {
                             switch (sval) {
                                 case "import":
                                     return TK_IMPORT;
+                                case "export":
+                                    return TK_EXPORT;
                                 case "as":
                                     return TK_AS;
                                 case "if":

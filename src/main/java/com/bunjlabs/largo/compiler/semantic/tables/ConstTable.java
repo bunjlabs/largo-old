@@ -21,7 +21,6 @@ public class ConstTable {
         }
     }
 
-
     public LargoValue[] buildConstPool() {
         LargoValue[] constPool = new LargoValue[table.size()];
         table.forEach((value, index) -> constPool[index] = value);

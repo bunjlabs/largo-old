@@ -1,19 +1,15 @@
-package com.bunjlabs.largo.lib;
+package com.bunjlabs.largo;
 
-import com.bunjlabs.largo.types.LargoFunction;
-import com.bunjlabs.largo.types.LargoString;
-import com.bunjlabs.largo.types.LargoUndefined;
-import com.bunjlabs.largo.types.LargoValue;
+import com.bunjlabs.largo.types.*;
 
 import java.util.Arrays;
 
-public class StdIoLib extends LargoLibrary {
-    public static final StdIoLib LIB = new StdIoLib();
+public class LargoSystemModule extends LargoModule {
 
-    private StdIoLib() {
-        set(LargoString.from("printf"), LargoFunction.fromVarArgFunction(this::printf));
-        set(LargoString.from("print"), LargoFunction.fromBiFunction(this::print));
-        set(LargoString.from("println"), LargoFunction.fromBiFunction(this::println));
+    public LargoSystemModule() {
+        export(LargoString.from("printf"), LargoFunction.fromVarArgFunction(this::printf));
+        export(LargoString.from("print"), LargoFunction.fromBiFunction(this::print));
+        export(LargoString.from("println"), LargoFunction.fromBiFunction(this::println));
     }
 
     private LargoValue println(LargoValue context, LargoValue arg) {

@@ -1,6 +1,7 @@
 package com.bunjlabs.largo.types;
 
 public class LargoBoolean extends LargoValue {
+    private static final LargoPrototype PROTOTYPE = new Prototype();
     public static final LargoBoolean FALSE = new LargoBoolean(false);
     public static final LargoBoolean TRUE = new LargoBoolean(true);
     private final boolean value;
@@ -16,6 +17,11 @@ public class LargoBoolean extends LargoValue {
     @Override
     public LargoType getType() {
         return LargoType.BOOLEAN;
+    }
+
+    @Override
+    public LargoPrototype getPrototype() {
+        return PROTOTYPE;
     }
 
     @Override
@@ -321,5 +327,21 @@ public class LargoBoolean extends LargoValue {
     @Override
     public LargoValue gteq(int rv) {
         return LargoBoolean.from(asJInteger() >= rv);
+    }
+
+    private static class Prototype extends LargoPrototype {
+
+        Prototype() {
+            setProperty("valueOf", LargoFunction.fromBiFunction(this::valueOf));
+            setProperty("toString", LargoFunction.fromFunction(this::convertString));
+        }
+
+        private LargoValue valueOf(LargoValue thisRef, LargoValue value) {
+            return value.asBoolean();
+        }
+
+        private LargoValue convertString(LargoValue thisRef) {
+            return thisRef.asString();
+        }
     }
 }

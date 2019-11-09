@@ -1,6 +1,6 @@
 package com.bunjlabs.largo;
 
-public interface LargoRuntimeConstraints {
+public interface LargoConstraints {
 
     int getMaxCodeLength();
 

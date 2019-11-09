@@ -47,9 +47,13 @@ public class InstructionSequenceBuilder {
         return add(new Instruction(InstructionName.L_SETFIELD, object, fieldConstant, value));
     }
 
-    // import
+    // modules
     public Instruction imp(int result, int constant) {
         return add(new Instruction(InstructionName.L_IMPORT, result, constant));
+    }
+
+    public Instruction exp(int result, int constant) {
+        return add(new Instruction(InstructionName.L_EXPORT, result, constant));
     }
 
     // stack operators
@@ -77,14 +81,6 @@ public class InstructionSequenceBuilder {
 
     public Instruction store(int variable, int reg) {
         return add(new Instruction(InstructionName.L_STORE, variable, reg));
-    }
-
-    public Instruction loado(int result, int variable) {
-        return add(new Instruction(InstructionName.L_LOADO, result, variable));
-    }
-
-    public Instruction storeo(int variable, int reg) {
-        return add(new Instruction(InstructionName.L_STOREO, variable, reg));
     }
 
     public Instruction loadc(int result, int constant) {

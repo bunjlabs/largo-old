@@ -6,16 +6,18 @@ import com.bunjlabs.largo.types.LargoValue;
 public class SemanticInfo {
     private final Node root;
     private final LargoValue[] constPool;
-    private final SemanticInfo[] functions;
+    private final SemanticInfo[] closures;
     private final int argumentsCount;
-    private final int localVariablesCount;
+    private final int variablesCount;
+    private final int localVariablesIndex;
 
-    public SemanticInfo(Node root, LargoValue[] constPool, SemanticInfo[] functions, int argumentsCount, int localVariablesCount) {
+    public SemanticInfo(Node root, LargoValue[] constPool, SemanticInfo[] closures, int argumentsCount, int variablesCount, int localVariablesIndex) {
         this.root = root;
         this.constPool = constPool;
-        this.functions = functions;
+        this.closures = closures;
         this.argumentsCount = argumentsCount;
-        this.localVariablesCount = localVariablesCount;
+        this.variablesCount = variablesCount;
+        this.localVariablesIndex = localVariablesIndex;
     }
 
     public Node getRoot() {
@@ -26,15 +28,19 @@ public class SemanticInfo {
         return constPool;
     }
 
-    public SemanticInfo[] getFunctions() {
-        return functions;
+    public SemanticInfo[] getClosures() {
+        return closures;
     }
 
     public int getArgumentsCount() {
         return argumentsCount;
     }
 
-    public int getLocalVariablesCount() {
-        return localVariablesCount;
+    public int getVariablesCount() {
+        return variablesCount;
+    }
+
+    public int getLocalVariablesIndex() {
+        return localVariablesIndex;
     }
 }

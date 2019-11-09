@@ -26,22 +26,16 @@ public class CodeGenerator {
     private final SemanticInfo semanticInfo;
     private int loopLevel = 0;
     private int maxRegistersCount = 0;
-    private int maxVariablesCount = 0;
     private int maxCallStackSize = 0;
 
     public CodeGenerator(SemanticInfo semanticInfo) {
         this.semanticInfo = semanticInfo;
-        reserveVariables(semanticInfo.getLocalVariablesCount());
     }
 
     private void reserveRegisters(int count) {
         if (count > maxRegistersCount) {
             maxRegistersCount = count;
         }
-    }
-
-    private void reserveVariables(int count) {
-        maxVariablesCount += count;
     }
 
     private void reserveCallStack(int size) {
@@ -69,22 +63,6 @@ public class CodeGenerator {
         while (!continues.isEmpty() && continues.peek().getLoopLevel() == loopLevel) {
             FlowBreak br = continues.pop();
             br.getInstruction().a = back - br.getPos() + 2; // 2 because cur op is JMP
-        }
-    }
-
-    private void generateVarLoad(int reg, int variable, boolean outer) {
-        if (outer) {
-            inst.loado(reg, variable);
-        } else {
-            inst.load(reg, variable);
-        }
-    }
-
-    private void generateVarStore(int variable, int reg, boolean outer) {
-        if (outer) {
-            inst.storeo(variable, reg);
-        } else {
-            inst.store(variable, reg);
         }
     }
 
@@ -117,8 +95,8 @@ public class CodeGenerator {
 
         Node body = node.getChild(1);
 
-        SemanticInfo[] functions = semanticInfo.getFunctions();
-        SemanticInfo closureSemanticInfo = functions[node.getArgument()];
+        SemanticInfo[] closures = semanticInfo.getClosures();
+        SemanticInfo closureSemanticInfo = closures[node.getArgument()];
         CodeGenerator generator = new CodeGenerator(closureSemanticInfo);
 
         if (checkNodeType(body, ND_STMT_LIST)) {
@@ -133,16 +111,14 @@ public class CodeGenerator {
 
         int registersCount = generator.maxRegistersCount;
         int argumentsCount = closureSemanticInfo.getArgumentsCount();
-        int variablesCount = generator.maxVariablesCount;
-        int localVariablesCount = closureSemanticInfo.getLocalVariablesCount();
+        int variablesCount = closureSemanticInfo.getVariablesCount();
+        int variablesIndex = closureSemanticInfo.getLocalVariablesIndex();
         int callStackSize = generator.maxCallStackSize;
 
         Blueprint[] blueprintsArray = generator.blueprints.toArray(new Blueprint[0]);
-
-        Blueprint blueprint = new Blueprint(code, constantPool, registersCount, argumentsCount, variablesCount, localVariablesCount, callStackSize, blueprintsArray);
+        Blueprint blueprint = new Blueprint(code, constantPool, registersCount, argumentsCount, variablesCount, variablesIndex, callStackSize, blueprintsArray);
 
         reserveRegisters(generator.maxRegistersCount);
-        reserveVariables(variablesCount);
         reserveCallStack(callStackSize);
 
         blueprints.add(blueprint);
@@ -229,11 +205,7 @@ public class CodeGenerator {
 
         if (node.getOperator() == OP_ASSIGN) {
             generateExpression(rightNode, reg);
-            if (leftNode.getType() == ND_ID_LOCAL) {
-                inst.store(leftNode.getArgument(), reg);
-            } else {
-                inst.storeo(leftNode.getArgument(), reg);
-            }
+            inst.store(leftNode.getArgument(), reg);
             return;
         }
 
@@ -258,7 +230,7 @@ public class CodeGenerator {
                     inst.mod(reg, reg, reg + 1);
                 }
 
-                generateVarStore(leftNode.getArgument(), reg, leftNode.getType() == ND_ID_OUTER);
+                inst.store(leftNode.getArgument(), reg);
                 return;
             case OP_PLUS:
                 inst.add(reg, reg, reg + 1);
@@ -320,24 +292,24 @@ public class CodeGenerator {
 
                 switch (op) {
                     case OP_DPREPLUS:
-                        generateVarLoad(reg, id, type == ND_ID_OUTER);
+                        inst.load(id, reg);
                         inst.inc(reg, reg);
-                        generateVarStore(id, reg, type == ND_ID_OUTER);
+                        inst.store(id, reg);
                         break;
                     case OP_DPOSTPLUS:
-                        generateVarLoad(reg, id, type == ND_ID_OUTER);
+                        inst.load(id, reg);
                         inst.inc(reg, reg);
-                        generateVarStore(id, reg, type == ND_ID_OUTER);
+                        inst.store(id, reg);
                         break;
                     case OP_DPREMINUS:
-                        generateVarLoad(reg, id, type == ND_ID_OUTER);
+                        inst.load(id, reg);
                         inst.dec(reg, reg);
-                        generateVarStore(id, reg, type == ND_ID_OUTER);
+                        inst.store(id, reg);
                         break;
                     case OP_DPOSTMINUS:
-                        generateVarLoad(reg, id, type == ND_ID_OUTER);
+                        inst.load(id, reg);
                         inst.dec(reg, reg);
-                        generateVarStore(id, reg, type == ND_ID_OUTER);
+                        inst.store(id, reg);
                         break;
                 }
                 return;
@@ -368,11 +340,8 @@ public class CodeGenerator {
             case ND_UNOP_EXPR:
                 generateUnaryOperator(node, reg);
                 return;
-            case ND_ID_LOCAL:
+            case ND_ID:
                 inst.load(reg, node.getArgument());
-                break;
-            case ND_ID_OUTER:
-                inst.loado(reg, node.getArgument());
                 break;
             case ND_ARRAY:
                 generateArray(node, reg);
@@ -573,6 +542,12 @@ public class CodeGenerator {
         inst.store(node.getChild(0).getArgument(), 0);
     }
 
+    private void generateExport(Node node) throws SemanticException {
+        reserveRegisters(1);
+
+        inst.exp(0, node.getArgument());
+    }
+
     private void generateStatement(Node node) throws SemanticException {
         switch (node.getType()) {
             case ND_STMT_LIST:
@@ -582,6 +557,9 @@ public class CodeGenerator {
                 return;
             case ND_IMPORT:
                 generateImport(node);
+                return;
+            case ND_EXPORT:
+                generateExport(node);
                 return;
             case ND_VARINIT_STMT:
                 generateVariableInit(node);
@@ -644,12 +622,11 @@ public class CodeGenerator {
         LargoValue[] constantPool = semanticInfo.getConstPool();
         int registersCount = maxRegistersCount;
         int argumentsCount = semanticInfo.getArgumentsCount();
-        int variablesCount = maxVariablesCount;
-        int localVariablesCount = semanticInfo.getLocalVariablesCount();
+        int variablesCount = semanticInfo.getVariablesCount();
+        int variablesIndex = semanticInfo.getLocalVariablesIndex();
         int callStackSize = maxCallStackSize;
         Blueprint[] blueprintsArray = blueprints.toArray(new Blueprint[0]);
 
-
-        return new Blueprint(code, constantPool, registersCount, argumentsCount, variablesCount, localVariablesCount, callStackSize, blueprintsArray);
+        return new Blueprint(code, constantPool, registersCount, argumentsCount, variablesCount, variablesIndex, callStackSize, blueprintsArray);
     }
 }

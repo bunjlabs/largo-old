@@ -1,11 +1,12 @@
 package com.bunjlabs.largo;
 
-import com.bunjlabs.largo.types.LargoContext;
+import com.bunjlabs.largo.types.LargoValue;
 
 public interface LargoEnvironment {
 
-    LargoRuntimeConstraints getConstraints();
+    LargoConstraints getConstraints();
 
-    LargoContext getContext();
+    void addModule(String id, LargoModule module);
 
+    LargoModule importModule(String id);
 }

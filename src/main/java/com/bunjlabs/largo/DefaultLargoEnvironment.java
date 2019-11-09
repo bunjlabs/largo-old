@@ -1,36 +1,36 @@
 package com.bunjlabs.largo;
 
-import com.bunjlabs.largo.lib.MathLib;
-import com.bunjlabs.largo.types.LargoContext;
-import com.bunjlabs.largo.types.LargoObject;
-import com.bunjlabs.largo.types.LargoString;
 import com.bunjlabs.largo.types.LargoValue;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class DefaultLargoEnvironment implements LargoEnvironment {
 
-    private final LargoContext context = LargoContext.create();
-
-    private final LargoRuntimeConstraints constraints;
+    private final Map<String, LargoModule> modules = new HashMap<>();
+    private final LargoConstraints constraints;
 
     public DefaultLargoEnvironment() {
-        this.constraints = new DefaultLargoRuntimeConstraints();
+        this.constraints = new DefaultLargoConstraints();
     }
 
-    public DefaultLargoEnvironment(LargoRuntimeConstraints constraints) {
+    public DefaultLargoEnvironment(LargoConstraints constraints) {
         this.constraints = constraints;
     }
 
-    public void export(String id, LargoValue value) {
-        context.set(LargoString.from(id), value);
+    @Override
+    public void addModule(String id, LargoModule module) {
+        modules.put(id, module);
     }
 
     @Override
-    public LargoRuntimeConstraints getConstraints() {
+    public LargoModule importModule(String id) {
+        return modules.get(id);
+    }
+
+    @Override
+    public LargoConstraints getConstraints() {
         return constraints;
     }
 
-    @Override
-    public LargoContext getContext() {
-        return context;
-    }
 }

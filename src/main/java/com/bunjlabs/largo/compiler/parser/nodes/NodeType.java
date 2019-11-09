@@ -4,6 +4,7 @@ public enum NodeType {
     ND_EMPTY,             // empty statement []
 
     ND_IMPORT,            // import statement [id]
+    ND_EXPORT,            // import statement [id]
 
     ND_STMT_LIST,         // list of statements [left-part, right-part] (left-part may be another list)
     ND_EXPR_STMT,         // single expression as statement [expression]
@@ -31,8 +32,7 @@ public enum NodeType {
     // Expressions with data
     ND_NULL,
     ND_UNDEFINED,
-    ND_ID_LOCAL,
-    ND_ID_OUTER,
+    ND_ID,
     ND_NUMBER,
     ND_BOOLEAN,
     ND_STRING,

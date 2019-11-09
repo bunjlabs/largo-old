@@ -5,36 +5,30 @@ import java.util.*;
 public class IdTable {
 
     private final Deque<VariableScope> scopeStack = new ArrayDeque<>();
-
     private int autoIncrementId = 0;
 
     public IdTable() {
         push();
     }
 
-    public IdTable(List<String> funcArguments) {
-        push();
-        for (String arg : funcArguments) createId(arg);
-    }
-
-    public int getId(String name) {
+    public ResolvedId getId(String name) {
         for (VariableScope scope : scopeStack) {
             if (scope.variableExists(name)) {
-                return scope.getId(name);
+                return new ResolvedId(name, scope.getId(name));
             }
         }
 
-        return -1;
+        return null;
     }
 
-    public int createId(String name) {
+    public ResolvedId createId(String name) {
         if (variableExists(name)) {
-            return -1;
+            return null;
         }
 
         int id = autoIncrementId++;
         scopeStack.peek().putId(name, id);
-        return id;
+        return new ResolvedId(name, id);
     }
 
 
@@ -57,6 +51,16 @@ public class IdTable {
             }
         }
         return false;
+    }
+
+    public static class ResolvedId {
+        public final String name;
+        public final int id;
+
+        ResolvedId(String name, int id) {
+            this.name = name;
+            this.id = id;
+        }
     }
 
     private static class VariableScope {

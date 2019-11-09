@@ -1,20 +1,20 @@
 package com.bunjlabs.largo;
 
-public class DefaultLargoRuntimeConstraints implements LargoRuntimeConstraints {
+public class DefaultLargoConstraints implements LargoConstraints {
 
     private int maxCodeLength;
     private int maxStackSize;
     private int maxVariables;
     private int maxConstantPoolSize;
 
-    public DefaultLargoRuntimeConstraints() {
+    public DefaultLargoConstraints() {
         this.maxCodeLength = Integer.MAX_VALUE;
         this.maxStackSize = Integer.MAX_VALUE;
         this.maxVariables = Integer.MAX_VALUE;
         this.maxConstantPoolSize = Integer.MAX_VALUE;
     }
 
-    public DefaultLargoRuntimeConstraints(int maxCodeLength, int maxStackSize, int maxVariables, int maxConstantPoolSize) {
+    public DefaultLargoConstraints(int maxCodeLength, int maxStackSize, int maxVariables, int maxConstantPoolSize) {
         this.maxCodeLength = maxCodeLength;
         this.maxStackSize = maxStackSize;
         this.maxVariables = maxVariables;

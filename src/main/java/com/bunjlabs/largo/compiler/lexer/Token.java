@@ -3,6 +3,7 @@ package com.bunjlabs.largo.compiler.lexer;
 public enum Token {
     // keywords
     TK_IMPORT,
+    TK_EXPORT,
     TK_AS,
     TK_IF,
     TK_ELSE,

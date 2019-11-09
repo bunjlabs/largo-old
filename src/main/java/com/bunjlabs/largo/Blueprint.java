@@ -8,28 +8,28 @@ public class Blueprint {
     private final int argumentsCount;
     private final int registersCount;
     private final int variablesCount;
-    private final int localVariablesCount;
+    private final int variablesIndex;
     private final int callStackSize;
     private final Blueprint[] blueprints;
 
-    public Blueprint(Instruction[] code, LargoValue[] constantPool, int registersCount, int argumentsCount, int variablesCount, int localVariablesCount, int callStackSize, Blueprint[] blueprints) {
+    public Blueprint(Instruction[] code, LargoValue[] constantPool, int registersCount, int argumentsCount, int variablesCount, int variablesIndex, int callStackSize, Blueprint[] blueprints) {
         this.code = code;
         this.constantPool = constantPool;
         this.registersCount = registersCount;
         this.argumentsCount = argumentsCount;
         this.variablesCount = variablesCount;
-        this.localVariablesCount = localVariablesCount;
+        this.variablesIndex = variablesIndex;
         this.callStackSize = callStackSize;
         this.blueprints = blueprints;
     }
 
-    public Blueprint(Instruction[] code, LargoValue[] constantPool, int registersCount, int argumentsCount, int variablesCount, int localVariablesCount, int callStackSize) {
+    public Blueprint(Instruction[] code, LargoValue[] constantPool, int registersCount, int argumentsCount, int variablesCount, int variablesIndex, int callStackSize) {
         this.code = code;
         this.constantPool = constantPool;
         this.registersCount = registersCount;
         this.argumentsCount = argumentsCount;
         this.variablesCount = variablesCount;
-        this.localVariablesCount = localVariablesCount;
+        this.variablesIndex = variablesIndex;
         this.callStackSize = callStackSize;
         this.blueprints = new Blueprint[0];
     }
@@ -54,8 +54,8 @@ public class Blueprint {
         return variablesCount;
     }
 
-    public int getLocalVariablesCount() {
-        return localVariablesCount;
+    public int getVariablesIndex() {
+        return variablesIndex;
     }
 
     public int getCallStackSize() {

@@ -1,5 +1,7 @@
 package com.bunjlabs.largo.types;
 
+import com.bunjlabs.largo.LargoContext;
+
 public abstract class LargoValue {
 
     abstract public LargoType getType();
@@ -9,7 +11,7 @@ public abstract class LargoValue {
     }
 
     public LargoObject getPrototype() {
-        return LargoPrototypes.VALUE;
+        return LargoPrototype.epmty();
     }
 
     public String asJString() {
@@ -44,7 +46,51 @@ public abstract class LargoValue {
         return LargoBoolean.FALSE;
     }
 
-    public LargoValue call(LargoValue context, LargoValue... args) {
+    public LargoArray asArray() {
+        return LargoArray.empty();
+    }
+
+    public LargoObject asObject() {
+        return LargoObject.empty();
+    }
+
+    public LargoFunction asFunction() {
+        return LargoFunction.empty();
+    }
+
+    public boolean isString() {
+        return getType() == LargoType.STRING;
+    }
+
+    public boolean isNumber() {
+        return getType() == LargoType.NUMBER;
+    }
+
+    public boolean isBoolean() {
+        return getType() == LargoType.BOOLEAN;
+    }
+
+    public boolean isArray() {
+        return getType() == LargoType.ARRAY;
+    }
+
+    public boolean isObject() {
+        return getType() == LargoType.OBJECT;
+    }
+
+    public boolean isFunction() {
+        return getType() == LargoType.FUNCTION;
+    }
+
+    public boolean isNull() {
+        return getType() == LargoType.NULL;
+    }
+
+    public boolean isUndefined() {
+        return getType() == LargoType.UNDEFINED;
+    }
+
+    public LargoValue call(LargoContext context, LargoValue thisRef, LargoValue... args) {
         return LargoUndefined.UNDEFINED;
     }
 

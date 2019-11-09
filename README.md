@@ -24,27 +24,26 @@ Largo is a tiny compiled scripting language that aims to run untrusted scripts i
 
 ## Running scripts
 ```java
-var environment = new DefaultLargoEnvironment();
-environment.export("print", LargoFunction.fromBiConsumer((ctx, str) -> System.out.println(str.asJString())));
-environment.export("math", MathLib.LIB);
+var runtime = LargoRuntime.createDefault();
 
-var runtime = new DefaultLargoRuntime(environment);
-var function = runtime.load(new FileReader("test.lgo"));
+var environment = runtime.getEnvironment();
+environment.addModule("Math", new LargoMathModule());
+environment.addModule("System", new LargoSystemModule());
 
-function.call(environment.getContext());
+runtime.load("test.lgo");
 ```
 
 ## Examples
 #### Hello world
 ```
-import print;
+import System;
 
-print("Hello world!");
+System.println("Hello world!");
 ```
 
 #### Fibonacci 
 ```
-import print;
+import System;
 
 let n = 20;
 let a = 0, b = 1, c;
@@ -55,45 +54,45 @@ for (let i = 2; i <= n; i++) {
     b = c;
 }
 
-print(b);
+System.println(b);
 ```
 
 #### Math
 ```
-import math as m;
-import print;
+import Math as M;
+import System;
 
 let age = 38.56;
-print(m.floor(age) + " " + m.ceil(age));
+System.println(M.floor(age) + " " + M.ceil(age));
 
-let angle = m.toRadians(60);
-print(m.sin(angle) + " " + m.cos(angle));
+let angle = M.toRadians(60);
+System.println(M.sin(angle) + " " + M.cos(angle));
 ```
 
 ### Closure
 ```
-import print;
+import System;
 
 let add = x -> y -> {
   let z = x + y;
-  print(x + '+' + y + '=' + z);
+  System.println(x + '+' + y + '=' + z);
   return z;
 };
 
 let res = add(3)(6); // will return 9 and print 3+6=9
 
-print(res);
+System.println(res);
 ```
 
 ### Arrays and objects
 ```
-import print;
+import System;
 
 let array = [5, "str", true];
 array[0] = 1;
-print(array); // print [1, "str", true]
+System.println(array); // print [1, "str", true]
 
 let object = {};
 object.field1 = "str";
-print(object); // print [[object]]
+System.println(object); // print [[object]]
 ```

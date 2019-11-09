@@ -1,52 +1,51 @@
 package com.bunjlabs.largo;
 
-import com.bunjlabs.largo.compiler.CompilationException;
-import com.bunjlabs.largo.compiler.codegen.CodeGenerator;
-import com.bunjlabs.largo.compiler.parser.Parser;
-import com.bunjlabs.largo.compiler.parser.nodes.Node;
-import com.bunjlabs.largo.compiler.semantic.SemanticAnalyzer;
-import com.bunjlabs.largo.compiler.semantic.SemanticInfo;
 import com.bunjlabs.largo.types.LargoClosure;
-import com.bunjlabs.largo.types.LargoFunction;
+import com.bunjlabs.largo.types.LargoString;
 
-import java.io.IOException;
 import java.io.Reader;
-import java.io.StringReader;
 
 public class DefaultLargoRuntime implements LargoRuntime {
 
     private final LargoEnvironment environment;
+    private final LargoLoader loader;
 
-    public DefaultLargoRuntime() {
-        this.environment = new DefaultLargoEnvironment();
-    }
-
-    public DefaultLargoRuntime(LargoEnvironment environment) {
+    DefaultLargoRuntime(LargoEnvironment environment, LargoLoader loader) {
         this.environment = environment;
+        this.loader = loader;
     }
 
     @Override
-    public LargoFunction load(String script) throws IOException, CompilationException, LargoRuntimeException {
-        return load(new StringReader(script));
+    public LargoEnvironment getEnvironment() {
+        return environment;
     }
 
     @Override
-    public LargoFunction load(Reader reader) throws IOException, CompilationException, LargoRuntimeException {
-        Parser parser = new Parser(reader);
-        Node root = parser.parse();
-
-        SemanticAnalyzer semanticAnalyzer = new SemanticAnalyzer(root);
-        SemanticInfo semanticInfo = semanticAnalyzer.analyze();
-
-        CodeGenerator codeGenerator = new CodeGenerator(semanticInfo);
-        Blueprint blueprint = codeGenerator.generate();
-
-        return load(blueprint);
+    public LargoLoader getLoader() {
+        return loader;
     }
 
     @Override
-    public LargoFunction load(Blueprint blueprint) throws LargoRuntimeException {
-        LargoRuntimeConstraints constraints = environment.getConstraints();
+    public LargoModule load(String id) throws LargoLoaderException, LargoRuntimeException {
+        Blueprint blueprint = loader.load(id);
+        return load(id, blueprint);
+    }
+
+    @Override
+    public LargoModule load(String id, String source) throws LargoLoaderException, LargoRuntimeException {
+        Blueprint blueprint = loader.loadSource(source);
+        return load(id, blueprint);
+    }
+
+    @Override
+    public LargoModule load(String id, Reader source) throws LargoLoaderException, LargoRuntimeException {
+        Blueprint blueprint = loader.loadSource(source);
+        return load(id, blueprint);
+    }
+
+    @Override
+    public LargoModule load(String id, Blueprint blueprint) throws LargoRuntimeException {
+        LargoConstraints constraints = environment.getConstraints();
 
         if (blueprint.getInstructionsCount() > constraints.getMaxCodeLength()) {
             throw new LargoRuntimeException("Maximum code length exceeded " +
@@ -72,6 +71,38 @@ public class DefaultLargoRuntime implements LargoRuntime {
                     " actual: " + blueprint.getCallStackSize());
         }
 
-        return LargoClosure.from(blueprint);
+        LargoClosure closure = LargoClosure.from(blueprint);
+        LargoModule module = new LargoModule();
+        LargoContext context = new Context(module);
+
+        closure.call(context, closure);
+
+        environment.addModule(id, module);
+
+        return module;
+    }
+
+    private class Context implements LargoContext {
+
+        private final LargoModule module;
+
+        Context(LargoModule module) {
+            this.module = module;
+        }
+
+        @Override
+        public LargoEnvironment getEnvironment() {
+            return environment;
+        }
+
+        @Override
+        public LargoRuntime getRuntime() {
+            return DefaultLargoRuntime.this;
+        }
+
+        @Override
+        public LargoModule getCurrentModule() {
+            return module;
+        }
     }
 }

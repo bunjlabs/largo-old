@@ -8,9 +8,19 @@ import java.io.Reader;
 
 public interface LargoRuntime {
 
-    LargoFunction load(String script) throws IOException, CompilationException, LargoRuntimeException;
+    static LargoRuntime createDefaultRuntime() {
+        return new LargoRuntimeBuilder().build();
+    }
 
-    LargoFunction load(Reader reader) throws IOException, CompilationException, LargoRuntimeException;
+    LargoEnvironment getEnvironment();
 
-    LargoFunction load(Blueprint blueprint) throws LargoRuntimeException;
+    LargoLoader getLoader();
+
+    LargoModule load(String id) throws IOException, CompilationException, LargoRuntimeException, LargoLoaderException;
+
+    LargoModule load(String id, String source) throws IOException, CompilationException, LargoRuntimeException, LargoLoaderException;
+
+    LargoModule load(String id, Reader source) throws IOException, CompilationException, LargoRuntimeException, LargoLoaderException;
+
+    LargoModule load(String id, Blueprint blueprint) throws LargoRuntimeException;
 }
